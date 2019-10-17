@@ -1,0 +1,22 @@
+﻿#pragma kernel TransferData
+
+uint VertexCount;
+
+Buffer<float> DataBuffer;
+
+RWTexture2D<float4> DataMap;
+
+[numthreads(8, 8, 1)]
+void TransferData(uint2 id : SV_DispatchThreadID)
+{
+	uint i = id.x + id.y * VertexCount;
+
+	float4 data = float4(
+		DataBuffer[i * 4],
+		DataBuffer[i * 4 + 1],
+		DataBuffer[i * 4 + 2],
+		DataBuffer[i * 4 + 3]
+	);
+
+	DataMap[id] = float4(data.xxx,1);
+}

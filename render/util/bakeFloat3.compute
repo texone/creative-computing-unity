@@ -1,0 +1,33 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it with cs.SetTexture
+RWTexture2D<float4> computeTexture;
+
+uint size;
+uint lastIndex;
+
+Buffer<float3> computeBuffer;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+
+	uint index = id.y * size + id.x;
+
+	//if (index > lastIndex) index = ( index * 132049U ) % lastIndex; // Ended up not using this.
+
+	float3 pos;
+
+	if (index > lastIndex) {
+
+		pos = 0;
+	}
+	else {
+
+		pos = computeBuffer[index];
+
+	}
+
+	computeTexture[id.xy] = float4 (pos.xyz, 1);
+}
