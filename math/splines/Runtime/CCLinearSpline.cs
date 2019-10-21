@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using cc.creativecomputing.math.util;
+using UnityEditor;
 
 /*
  * Copyright (c) 2013 christianr.
@@ -19,7 +21,11 @@ namespace cc.creativecomputing.math.spline
 	public class CCLinearSpline : CCSpline
 	{
 
-		private IList<CCLine3> _myLines = new List<CCLine3>();
+		private readonly IList<CCLine3> _myLines = new List<CCLine3>();
+
+		public CCLinearSpline() : this(false)
+		{
+		}
 
 		public CCLinearSpline(bool theIsClosed) : base(CCSplineType.LINEAR, theIsClosed)
 		{
@@ -33,26 +39,25 @@ namespace cc.creativecomputing.math.spline
 		{
 		}
 
-		public override void ComputeTotalLengthImpl()
+		protected override void ComputeTotalLengthImpl()
 		{
 			_myLines.Clear();
-			if (_myPoints.Count > 1)
+			if (points.Count <= 1) return;
+			
+			for (var i = 0; i < points.Count - 1; i++)
 			{
-				for (int i = 0; i < _myPoints.Count - 1; i++)
-				{
-					CCLine3 myLine = new CCLine3(_myPoints[i], _myPoints[i + 1]);
-					float myLength = myLine.Length();
-					_mySegmentsLength.Add(myLength);
-					_myTotalLength += myLength;
-					_myLines.Add(myLine);
-				}
+				var myLine = new CCLine3(points[i], points[i + 1]);
+				var myLength = myLine.Length();
+				segmentsLengths.Add(myLength);
+				totalLength += myLength;
+				_myLines.Add(myLine);
 			}
 		}
 
-		public override Vector3 Interpolate(float value, int currentControlPoint)
+		protected override Vector3 Interpolate(float value, int currentControlPoint)
 		{
 			EndEditSpline();
-			return Vector3.Lerp(_myPoints[currentControlPoint], _myPoints[currentControlPoint + 1], value);
+			return Vector3.Lerp(points[currentControlPoint], points[currentControlPoint + 1], value);
 		}
 
 
@@ -81,23 +86,23 @@ namespace cc.creativecomputing.math.spline
 
 		public override Vector3 ClosestPoint(Vector3 thePoint)
 		{
-			return closestPoint(thePoint, 0, _myLines.Count);
+			return ClosestPoint(thePoint, 0, _myLines.Count);
 		}
 
-		public virtual Vector3 closestPoint(Vector3 thePoint, int theStart, int theEnd)
+		public virtual Vector3 ClosestPoint(Vector3 thePoint, int theStart, int theEnd)
 		{
 			if (theEnd < theStart)
 			{
 				theEnd += _myLines.Count;
 			}
-			Vector3 myClosestPoint = new Vector3();
-			float myMinDistSq = float.MaxValue;
+			var myClosestPoint = new Vector3();
+			var myMinDistSq = float.MaxValue;
 
-			for (int i = theStart; i < theEnd;i++)
+			for (var i = theStart; i < theEnd;i++)
 			{
-				CCLine3 myLine = _myLines[i % _myLines.Count];
-				Vector3 myPoint = myLine.ClosestPoint(thePoint);
-				float myDistSq = Vector3.Distance(myPoint, thePoint);
+				var myLine = _myLines[i % _myLines.Count];
+				var myPoint = myLine.ClosestPoint(thePoint);
+				var myDistSq = Vector3.Distance(myPoint, thePoint);
 				if (myDistSq < myMinDistSq)
 				{
 					myClosestPoint = myPoint;
@@ -107,11 +112,27 @@ namespace cc.creativecomputing.math.spline
 
 			return myClosestPoint;
 		}
-		public override void Clear()
+
+		protected override void Clear()
 		{
 			base.Clear();
 			_myLines.Clear();
 		}
+
+		public override void Draw()
+		{
+			Gizmos.color = Color.white;
+			for (var i = 0; i < Count - 1;i++)
+			{
+				Handles.DrawLine(
+					transform.TransformPoint(this[i]), 
+					transform.TransformPoint(this[i + 1]));
+			}
+		}
+
+		
+
+		
     }
 
 }

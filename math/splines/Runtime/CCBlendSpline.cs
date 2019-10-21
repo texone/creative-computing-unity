@@ -17,11 +17,8 @@ namespace cc.creativecomputing.math.spline
 
 	public class CCBlendSpline : CCSpline
 	{
-
-		private float _myBlend = 0;
-
-		private CCSpline _mySpline1;
-		private CCSpline _mySpline2;
+		private readonly CCSpline _mySpline1;
+		private readonly CCSpline _mySpline2;
 
 		public CCBlendSpline(CCSpline theSpline1, CCSpline theSpline2) : base(CCSplineType.BLEND, false)
 		{
@@ -30,47 +27,40 @@ namespace cc.creativecomputing.math.spline
 			_mySpline2 = theSpline2;
 		}
 
-		public virtual void blend(float theBlend)
-		{
-			_myBlend = theBlend;
-		}
+		public float Blend { get; set; } = 0;
 
-		public override void ComputeTotalLengthImpl()
+		protected override void ComputeTotalLengthImpl()
 		{
 
 		}
 
-		public override float TotalLength()
-		{
-			return CCMath.Blend(_mySpline1.TotalLength(), _mySpline2.TotalLength(), _myBlend);
-		}
+		public override float TotalLength => CCMath.Blend(_mySpline1.TotalLength, _mySpline2.TotalLength, Blend);
 
-		public override int NumberOfSegments()
-		{
-			return CCMath.Max(_mySpline1.NumberOfSegments(), _mySpline2.NumberOfSegments());
-		}
 
-		public override Vector3 Interpolate(float theBlend, int theControlPointIndex)
+		public override int NumberOfSegments => CCMath.Max(_mySpline1.NumberOfSegments, _mySpline2.NumberOfSegments);
+		
+
+		protected override Vector3 Interpolate(float theBlend, int theControlPointIndex)
 		{
 			return new Vector3();
 		}
 
 		public override Vector3 Interpolate(float theBlend)
 		{
-			return Vector3.Lerp(_mySpline1.Interpolate(theBlend), _mySpline2.Interpolate(theBlend), _myBlend);
+			return Vector3.Lerp(_mySpline1.Interpolate(theBlend), _mySpline2.Interpolate(theBlend), Blend);
 		}
 
 		public virtual Vector3 Interpolate(float theBlendSpline, float theBlendPoint)
 		{
-			Vector3 myVector0 = _mySpline1.Interpolate(theBlendPoint);
-			Vector3 myVector1 = _mySpline2.Interpolate(theBlendPoint);
-			if (myVector0 == null || myVector1 == null)
-			{
-				return new Vector3();
-			}
+			var myVector0 = _mySpline1.Interpolate(theBlendPoint);
+			var myVector1 = _mySpline2.Interpolate(theBlendPoint);
 			return Vector3.Lerp(myVector0, myVector1, theBlendSpline);
 
 		}
-    }
+
+		public override void Draw()
+		{
+		}
+	}
 
 }

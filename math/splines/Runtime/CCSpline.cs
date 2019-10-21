@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using cc.creativecomputing.math.util;
+using UnityEngine.Serialization;
 
 /*
  * Copyright (c) 2013 christianr.
@@ -23,13 +25,13 @@ namespace cc.creativecomputing.math.spline
 	/// </para>
 	/// <a href="http://en.wikipedia.org/wiki/Spline_(mathematics)">spline at wikipedia</a>
 	/// </summary>
-	public abstract class CCSpline
+	public abstract class CCSpline : MonoBehaviour
 	{
 
-		protected internal List<Vector3> _myPoints = new List<Vector3>();
+		public List<Vector3> points = new List<Vector3>();
 
-		protected internal bool _myIsClosed;
-		protected internal IList<float> _mySegmentsLength;
+		public bool isClosed;
+		public List<float> segmentsLengths = new List<float>();
 
 		public enum CCSplineType
 		{
@@ -40,38 +42,38 @@ namespace cc.creativecomputing.math.spline
 			BLEND
 		}
 
-		protected internal float _myTotalLength;
-		protected internal CCSplineType _myType;
+		public float totalLength;
+		private readonly CCSplineType _type;
 
-		protected internal bool _myIsModified = true;
+		protected bool isModified = true;
 
-		protected internal int _myInterpolationIncrease = 1;
+		protected int interpolationIncrease = 1;
 
 		/// <summary>
-		/// Create a spline </summary> </param>
-		/// <param name="theSplineType"> the type of the spline <seealso cref= {CCSplineType} </seealso>
+		/// Create a spline </summary> 
+		/// <param name="theSplineType"> the type of the spline <seealso cref= "CCSplineType" /></param>
 		/// <param name="theIsClosed"> true if the spline cycle. </param>
-		public CCSpline(CCSplineType theSplineType, bool theIsClosed)
+		protected CCSpline(CCSplineType theSplineType, bool theIsClosed)
 		{
-			_myIsClosed = theIsClosed;
-			_myType = theSplineType;
+			isClosed = theIsClosed;
+			_type = theSplineType;
 		}
 
 		/// <summary>
-		/// Create a spline </summary> </param>
-		/// <param name="theSplineType"> the type of the spline <seealso cref= {CCSplineType} </seealso>
+		/// Create a spline </summary> 
+		/// <param name="theSplineType"> the type of the spline <seealso cref= "CCSplineType"/> </param>
 		/// <param name="theControlPoints"> an array of vector to use as control points of the spline </param>
 		/// <param name="theIsClosed"> true if the spline cycle. </param>
-		public CCSpline(CCSplineType theSplineType, Vector3[] theControlPoints, bool theIsClosed) : this(theSplineType, theIsClosed)
+		protected CCSpline(CCSplineType theSplineType, Vector3[] theControlPoints, bool theIsClosed) : this(theSplineType, theIsClosed)
 		{
 			AddControlPoints(theControlPoints);
 		}
 
 		/// <summary>
-		/// Create a spline </summary> </param>
-		/// <param name="theSplineType"> the type of the spline <seealso cref= {CCSplineType} </seealso>
+		/// Create a spline </summary> 
+		/// <param name="theSplineType"> the type of the spline <seealso cref= "CCSplineType"/> </param>
 		/// <param name="theControlPoints"> a list of vector to use as control points of the spline </param>
-		/// <param name="theIsClosed"> true if the spline cycle. </param>
+		/// <param name="theIsClosed">true if the spline cycle.</param>
 		public CCSpline(CCSplineType theSplineType, IList<Vector3> theControlPoints, bool theIsClosed) : this(theSplineType, theIsClosed)
 		{
 			AddControlPoints(theControlPoints);
@@ -79,41 +81,41 @@ namespace cc.creativecomputing.math.spline
 
 		/// <summary>
 		/// Use this method to mark the spline as modified, this is only necessary
-		/// if you directly add points using the reference passed by the <seealso cref="#points()"/> method.
+		/// if you directly add points using the reference passed by the <seealso cref="Points()"/> method.
 		/// </summary>
 		public virtual void BeginEditSpline()
 		{
-			if (_myIsModified)
+			if (isModified)
 			{
 				return;
 			}
 
-			_myIsModified = true;
-
-			if (_myPoints.Count > 2 && _myIsClosed)
+			isModified = true;
+			Debug.Log(points);
+			if (points.Count > 2 && isClosed)
 			{
-				_myPoints.RemoveAt(_myPoints.Count - 1);
+				points.RemoveAt(points.Count - 1);
 			}
 
 		}
 
 		public virtual void EndEditSpline()
 		{
-			if (!_myIsModified)
+			if (!isModified)
 			{
 				return;
 			}
 
-			_myIsModified = false;
+			isModified = false;
 
-			if (_myPoints.Count >= 2 && _myIsClosed)
+			if (points.Count >= 2 && isClosed)
 			{
-				_myPoints.Add(_myPoints[0]);
+				points.Add(points[0]);
 			}
 
-			if (_myPoints.Count > 1)
+			if (points.Count > 1)
 			{
-				ComputeTotalLentgh();
+				ComputeTotalLength();
 			}
         }
 
@@ -122,16 +124,16 @@ namespace cc.creativecomputing.math.spline
 		/// </summary>
         public void Invert()
         {
-            List<Vector3> myNewPoints = new List<Vector3>(_myPoints);
-            _myPoints.Clear();
-            for (int i = myNewPoints.Count - 1; i >= 0; i--)
+            var myNewPoints = new List<Vector3>(points);
+            points.Clear();
+            for (var i = myNewPoints.Count - 1; i >= 0; i--)
             {
-                _myPoints.Add(myNewPoints[i]);
+                points.Add(myNewPoints[i]);
             }
 
-            if (_myPoints.Count > 1)
+            if (points.Count > 1)
             {
-                ComputeTotalLentgh();
+                ComputeTotalLength();
             }
         }
 
@@ -141,7 +143,7 @@ namespace cc.creativecomputing.math.spline
         public virtual void RemovePoint(Vector3 controlPoint)
 		{
 			BeginEditSpline();
-			_myPoints.Remove(controlPoint);
+			points.Remove(controlPoint);
 		}
 
 		/// <summary>
@@ -156,15 +158,15 @@ namespace cc.creativecomputing.math.spline
 		public virtual void AddPoint(Vector3 theControlPoint)
 		{
 			BeginEditSpline();
-			_myPoints.Add(theControlPoint);
+			points.Add(theControlPoint);
 		}
 
 		/// <summary>
 		/// Adds the given control points to the spline </summary>
 		/// <param name="theControlPoints"> </param>
-		public virtual void AddControlPoints(params Vector3[] theControlPoints)
+		protected virtual void AddControlPoints(params Vector3[] theControlPoints)
 		{
-			foreach (Vector3 myPoint in theControlPoints)
+			foreach (var myPoint in theControlPoints)
 			{
 				AddPoint(myPoint);
 			}
@@ -173,9 +175,9 @@ namespace cc.creativecomputing.math.spline
 		/// <summary>
 		/// Adds the given control points to the spline </summary>
 		/// <param name="theControlPoints"> </param>
-		public virtual void AddControlPoints(IList<Vector3> theControlPoints)
+		protected virtual void AddControlPoints(IEnumerable<Vector3> theControlPoints)
 		{
-			foreach (Vector3 myPoint in theControlPoints)
+			foreach (var myPoint in theControlPoints)
 			{
 				AddPoint(myPoint);
 			}
@@ -185,33 +187,43 @@ namespace cc.creativecomputing.math.spline
 		/// returns this spline control points
 		/// @return
 		/// </summary>
-		public virtual IList<Vector3> Points()
+		public  virtual IList<Vector3> Points => points;
+
+		public int Count
 		{
-			return _myPoints;
+			get
+			{
+				if (points == null) return 0;
+				return points.Count;
+			}
 		}
 
-        public Vector3 LastPoint()
-        {
-            if (_myPoints.Count == 0) return new Vector3();
-            return _myPoints[_myPoints.Count - 1];
-        }
+		public Vector3 this[int theIndex]
+		{
+			get => points[theIndex];
+			set => points[theIndex] = value;
+		}
 
-        public  abstract void ComputeTotalLengthImpl();
+
+
+		public Vector3 LastPoint => points.Count == 0 ? new Vector3() : points[points.Count - 1];
+
+		protected abstract void ComputeTotalLengthImpl();
 
 		/// <summary>
 		/// This method computes the total length of the curve.
 		/// </summary>
-		protected internal virtual void ComputeTotalLentgh()
+		public virtual void ComputeTotalLength()
 		{
-			_myTotalLength = 0;
+			totalLength = 0;
 
-			if (_mySegmentsLength == null)
+			if (segmentsLengths == null)
 			{
-				_mySegmentsLength = new List<float>();
+				segmentsLengths = new List<float>();
 			}
 			else
 			{
-				_mySegmentsLength.Clear();
+				segmentsLengths.Clear();
 			}
 			ComputeTotalLengthImpl();
 		}
@@ -221,22 +233,22 @@ namespace cc.creativecomputing.math.spline
 		/// <param name="theBlend"> a value from 0 to 1 that represent the position between the current control point and the next one </param>
 		/// <param name="theControlPointIndex"> the current control point </param>
 		/// <returns> the position </returns>
-		public abstract Vector3 Interpolate(float theBlend, int theControlPointIndex);
+		protected abstract Vector3 Interpolate(float theBlend, int theControlPointIndex);
 
-        public virtual int InterpolationValues(float theBlend, out float theLocalBlend)
+		protected virtual int InterpolationValues(float theBlend, out float theLocalBlend)
         {
-            if (_mySegmentsLength.Count == 0) ComputeTotalLentgh();
-            float myLength = _myTotalLength * Mathf.Clamp01(theBlend);
+            if (segmentsLengths.Count == 0) ComputeTotalLength();
+            var myLength = totalLength * Mathf.Clamp01(theBlend);
             float myReachedLength = 0;
-            int myIndex = 0;
-            while (myIndex < _mySegmentsLength.Count && myReachedLength + _mySegmentsLength[myIndex] < myLength)
+            var myIndex = 0;
+            while (myIndex < SegmentLengths.Count && myReachedLength + SegmentLengths[myIndex] < myLength)
             {
-                myReachedLength += _mySegmentsLength[myIndex];
+                myReachedLength += SegmentLengths[myIndex];
                 myIndex++;
             }
             
-            float myLocalLength = myLength - myReachedLength;
-            theLocalBlend = myLocalLength / _mySegmentsLength[myIndex];
+            var myLocalLength = myLength - myReachedLength;
+            theLocalBlend = myLocalLength / SegmentLengths[myIndex];
             return myIndex;
         }
 
@@ -246,101 +258,96 @@ namespace cc.creativecomputing.math.spline
 		/// <returns> the position </returns>
 		public virtual Vector3 Interpolate(float theBlend)
 		{
-            if (_myPoints.Count == 0)
+            if (points.Count == 0)
             {
                 return new Vector3();
             }
-            if (_mySegmentsLength == null || _mySegmentsLength.Count == 0)
+            if (points.Count == 1)
             {
-                return new Vector3(_myPoints[0].x, _myPoints[0].y, _myPoints[0].z);
+	            return new Vector3(points[0].x, points[0].y, points[0].z);
             }
             if (theBlend >= 1)
             {
-                return LastPoint();
+                return LastPoint;
             }
 
-           
-			float myLocalBlend = 0;
-            int myIndex = InterpolationValues(theBlend, out myLocalBlend);
-			return Interpolate(myLocalBlend, myIndex * _myInterpolationIncrease);
+
+            if(totalLength == 0)ComputeTotalLength();
+            var myIndex = InterpolationValues(theBlend, out var myLocalBlend);
+			return transform.TransformPoint(Interpolate(myLocalBlend, myIndex * interpolationIncrease));
 		}
 
 		/// <summary>
 		/// returns true if the spline cycle
 		/// @return
 		/// </summary>
+		///
+		/// 
 		public virtual bool Closed
 		{
-			get
-			{
-				return _myIsClosed;
-			}
-		}
+			get => isClosed;
 
-		/// <summary>
-		/// set to true to make the spline cycle </summary>
-		/// <param name="theIsClosed"> </param>
-		public virtual void IsClosed(bool theIsClosed)
-		{
-			if (theIsClosed == _myIsClosed)
+			set
 			{
-				return;
+				if (value == isClosed)
+				{
+					return;
+				}
+				BeginEditSpline();
+				isClosed = value;
+				EndEditSpline();
 			}
-			BeginEditSpline();
-			_myIsClosed = theIsClosed;
-			EndEditSpline();
 		}
 
 		/// <summary>
 		/// return the total length of the spline
 		/// @return
 		/// </summary>
-		public virtual float TotalLength()
+		public virtual float TotalLength
 		{
-			return _myTotalLength;
+			get { return totalLength; }
 		}
 
 		/// <summary>
 		/// return the type of the spline
 		/// @return
 		/// </summary>
-		public virtual CCSplineType Type()
-		{
-			return _myType;
-		}
+		public CCSplineType Type => _type;
 
 		/// <summary>
 		/// Returns the number of segments in this spline
 		/// @return
 		/// </summary>
-		public virtual int NumberOfSegments()
-		{
-			return _mySegmentsLength.Count;
-		}
+		public virtual int NumberOfSegments =>segmentsLengths.Count;
 
 		/// <summary>
 		/// returns a list of float representing the segments length
 		/// @return
 		/// </summary>
-		public virtual IList<float> SegmentsLengths()
-		{
-			return _mySegmentsLength;
-		}
+		public IList<float> SegmentLengths => segmentsLengths;
 
 		public virtual Vector3 ClosestPoint(Vector3 thePoint)
 		{
-			float myMinDistanceSq = float.MaxValue;
-			Vector3 myPoint = new Vector3();
-			foreach (Vector3 myControlPoint in _myPoints)
+			var myMinDistanceSq = float.MaxValue;
+			var myPoint = new Vector3();
+			foreach (Vector3 myControlPoint in points)
 			{
-				float myDistSq = Vector3.Distance(thePoint,myPoint);
-				if (myDistSq < myMinDistanceSq)
-				{
-					myMinDistanceSq = myDistSq;
-					myPoint = myControlPoint;
-				}
+				var myDistSq = Vector3.Distance(thePoint,myPoint);
+				if (myDistSq >= myMinDistanceSq) continue;
+				
+				myMinDistanceSq = myDistSq;
+				myPoint = myControlPoint;
+				
 			}
 			return myPoint;
+		}
+
+		public void ForEach(Action<Vector3> theAction)
+		{
+			foreach (var vector in points)
+			{
+				theAction.Invoke(vector);
+			}
 		}
 
         /// <summary>
@@ -350,10 +357,10 @@ namespace cc.creativecomputing.math.spline
         /// <returns>List of theCount points on the spline</returns>
         public List<Vector3> Discretize(int theCount)
         {
-            List<Vector3> myResult = new List<Vector3>();
-            for (int i = 0; i < theCount;i++)
+            var myResult = new List<Vector3>();
+            for (var i = 0; i < theCount;i++)
             {
-                float myT = CCMath.Map(i, 0, theCount - 1, 0, 1);
+                var myT = CCMath.Map(i, 0, theCount - 1, 0, 1);
                 myResult.Add(Interpolate(myT));
             }
             return myResult;
@@ -362,16 +369,19 @@ namespace cc.creativecomputing.math.spline
 		/// <summary>
 		/// Removes all points from the spline
 		/// </summary>
-		public virtual void Clear()
+		protected virtual void Clear()
 		{
-			_myPoints.Clear();
-			if (_mySegmentsLength != null)
-			{
-				_mySegmentsLength.Clear();
-			}
-			_myTotalLength = 0;
+			points.Clear();
+			segmentsLengths?.Clear();
+			totalLength = 0;
 		}
+		
+		public abstract void Draw();
 
+		private void OnDrawGizmos()
+		{
+			Draw();
+		}
 	}
 
 }

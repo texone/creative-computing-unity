@@ -77,11 +77,11 @@ namespace cc.creativecomputing.math.spline
 			for (int i = 0; i < controlPoints.Count; ++i)
 			{
 				Vector4 controlPoint = controlPoints[i];
-				_myPoints.Add(new Vector3(controlPoint.x,controlPoint.y, controlPoint.z));
+				points.Add(new Vector3(controlPoint.x,controlPoint.y, controlPoint.z));
 				_myWeights[i] = controlPoint.w;
 			}
 			prepareNurbsKnots(_myKnots, _myBasisFunctionDegree);
-			ComputeTotalLentgh();
+			ComputeTotalLength();
 		}
 
 		/// <summary>
@@ -119,7 +119,7 @@ namespace cc.creativecomputing.math.spline
 			}
 		}
 
-		public override void ComputeTotalLengthImpl()
+		protected override void ComputeTotalLengthImpl()
 		{
 			// TODO implement this
 
@@ -149,9 +149,9 @@ namespace cc.creativecomputing.math.spline
 			}
 		}
 
-		public override Vector3 Interpolate(float value, int currentControlPoint)
+		protected override Vector3 Interpolate(float value, int currentControlPoint)
 		{
-			int controlPointAmount = _myPoints.Count;
+			int controlPointAmount = points.Count;
 
 			Vector3 store = new Vector3();
 			float delimeter = 0;
@@ -159,7 +159,7 @@ namespace cc.creativecomputing.math.spline
 			for (int i = 0; i < controlPointAmount; ++i)
 			{
 				float val = _myWeights[i] * ComputeBaseFunctionValue(i, _myBasisFunctionDegree, value, _myKnots);
-				store += _myPoints[i] * val;
+				store += points[i] * val;
 				delimeter += val;
 			}
 			return store *= 1f / delimeter;
@@ -214,6 +214,10 @@ namespace cc.creativecomputing.math.spline
 		public virtual int BasisFunctionDegree()
 		{
 			return _myBasisFunctionDegree;
+		}
+		
+		public override void Draw()
+		{
 		}
     }
 

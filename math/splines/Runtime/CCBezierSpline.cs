@@ -39,7 +39,7 @@ namespace cc.creativecomputing.math.spline
 
 		public CCBezierSpline(bool theIsClosed) : base(CCSplineType.BEZIER, theIsClosed)
 		{
-			_myInterpolationIncrease = 3;
+			interpolationIncrease = 3;
 		}
 
 		public CCBezierSpline() : this(false)
@@ -65,7 +65,7 @@ namespace cc.creativecomputing.math.spline
 		///            true if the spline cycle. </param>
 		public CCBezierSpline(Vector3[] theControlPoints, bool theIsClosed) : base(CCSplineType.BEZIER, theControlPoints, theIsClosed)
 		{
-			_myInterpolationIncrease = 3;
+			interpolationIncrease = 3;
 		}
 
 		/// <summary>
@@ -86,21 +86,22 @@ namespace cc.creativecomputing.math.spline
 		///            true if the spline cycle. </param>
 		public CCBezierSpline(IList<Vector3> theControlPoints, bool theIsClosed) : base(CCSplineType.BEZIER, theControlPoints, theIsClosed)
 		{
-			_myInterpolationIncrease = 3;
+			interpolationIncrease = 3;
 		}
 
 		public override void AddPoint(Vector3 theControlPoint)
 		{
-			if (_myPoints.Count == 0)
+			if (points.Count == 0)
 			{
-				_myPoints.Add(theControlPoint);
+				points.Add(theControlPoint);
 				return;
 			}
 
-			Vector3 myLastPoint = _myPoints[_myPoints.Count - 1];
-			_myPoints.Add(Vector3.Lerp(myLastPoint, theControlPoint, 0.25f));
-			_myPoints.Add(Vector3.Lerp(myLastPoint, theControlPoint, 0.75f));
-			_myPoints.Add(theControlPoint);
+			var myLastPoint = LastPoint;
+			points.Add(Vector3.Lerp(myLastPoint, theControlPoint, 0.25f));
+			points.Add(Vector3.Lerp(myLastPoint, theControlPoint, 0.75f));
+			points.Add(theControlPoint);
+			ComputeTotalLength();
 		}
 
         /// <summary>
@@ -111,17 +112,18 @@ namespace cc.creativecomputing.math.spline
         /// <param name="theCurveTensionB">how much curve tension shoud be used</param>
         public void AddPoint(Vector3 theControlPoint, float theCurveTensionA, float theCurveTensionB)
         {
-            if (_myPoints.Count == 0)
+            if (points.Count == 0)
             {
-                _myPoints.Add(theControlPoint);
+                points.Add(theControlPoint);
                 return;
             }
 
-            Vector3 myLastPoint = _myPoints[_myPoints.Count - 1];
-            Vector3 myLastControlPoint = _myPoints[_myPoints.Count - 2];
-            _myPoints.Add(Vector3.LerpUnclamped(myLastControlPoint, myLastPoint, 1 + theCurveTensionA));
-            _myPoints.Add(Vector3.Lerp(myLastPoint, theControlPoint, theCurveTensionB));
-            _myPoints.Add(theControlPoint);
+            var myLastPoint = points[points.Count - 1];
+            var myLastControlPoint = points[points.Count - 2];
+            points.Add(Vector3.LerpUnclamped(myLastControlPoint, myLastPoint, 1 + theCurveTensionA));
+            points.Add(Vector3.Lerp(myLastPoint, theControlPoint, theCurveTensionB));
+            points.Add(theControlPoint);
+            ComputeTotalLength();
         }
 
         /// <summary>
@@ -133,18 +135,20 @@ namespace cc.creativecomputing.math.spline
         /// <param name="theControlPoint2"> end point of the spline </param>
         public virtual void AddControlPoints(Vector3 theControlPoint1, Vector3 theControlPoint2)
 		{
-			if (_myPoints.Count > 2)
+			if (points.Count > 2)
 			{
-				_myPoints.Add(_myPoints[_myPoints.Count - 1] + (_myPoints[_myPoints.Count - 1] - (_myPoints[_myPoints.Count - 2])));
+				points.Add(points[points.Count - 1] + (points[points.Count - 1] - (points[points.Count - 2])));
 			}
 			else
 			{
-				_myPoints.Add(theControlPoint2);
+				points.Add(theControlPoint2);
 				return;
 			}
 
-			_myPoints.Add(theControlPoint1);
-			_myPoints.Add(theControlPoint2);
+			points.Add(theControlPoint1);
+			points.Add(theControlPoint2);
+			
+			ComputeTotalLength();
 		}
 
 		/// <summary>
@@ -156,23 +160,10 @@ namespace cc.creativecomputing.math.spline
 		/// <param name="thePoint3"> end point </param>
 		public virtual void AddControlPoints(Vector3 thePoint1, Vector3 thePoint2, Vector3 thePoint3)
 		{
-			if (thePoint1 != null)
-			{
-				_myPoints.Add(thePoint1);
-			}
-			else
-			{
-				_myPoints.Add(_myPoints[_myPoints.Count - 1]);
-			}
-			if (thePoint2 != null)
-			{
-				_myPoints.Add(thePoint2);
-			}
-			else
-			{
-				_myPoints.Add(thePoint3);
-			}
-			_myPoints.Add(thePoint3);
+			points.Add(thePoint1);
+			points.Add(thePoint2);
+			points.Add(thePoint3);
+			ComputeTotalLength();
 		}
 
 		/// <summary>
@@ -182,16 +173,17 @@ namespace cc.creativecomputing.math.spline
 		/// <param name="theP2"> control point 2 </param>
 		/// <param name="theP3"> control point 3 </param>
 		/// <returns> the length of the segment </returns>
-		public static float BezierLength(Vector3 theP0, Vector3 theP1, Vector3 theP2, Vector3 theP3)
+		private static float BezierLength(Vector3 theP0, Vector3 theP1, Vector3 theP2, Vector3 theP3)
 		{
-			float delta = 0.01f, t = 0.0f, result = 0.0f;
-			Vector3 v1 = theP0, v2 = new Vector3();
+			const float delta = 0.01f;
+			float t = 0.0f, result = 0.0f;
+			var v1 = theP0;
 			while (t <= 1.0f)
 			{
-					v2 = CCVector3.BezierPoint(theP0, theP1, theP2, theP3, t);
-					result += Vector3.Distance(v1,v2);
-					v1.Set(v2.x,v2.y,v2.z);
-					t += delta;
+				var v2 = CCVector3.BezierPoint(theP0, theP1, theP2, theP3, t);
+				result += Vector3.Distance(v1,v2);
+				v1.Set(v2.x,v2.y,v2.z);
+				t += delta;
 			}
 			return result;
 		}
@@ -199,39 +191,32 @@ namespace cc.creativecomputing.math.spline
 		/// <summary>
 		/// This method calculates the bezier curve length.
 		/// </summary>
-		public override void ComputeTotalLengthImpl()
+		protected override void ComputeTotalLengthImpl()
 		{
-			if (_myPoints.Count > 1)
+			if (points.Count <= 1) return;
+			for (var i = 0; i < points.Count - 3; i += 3)
 			{
-				for (int i = 0; i < _myPoints.Count - 3; i += 3)
-				{
-					float l = BezierLength(_myPoints[i], _myPoints[i + 1], _myPoints[i + 2], _myPoints[i + 3]);
-					_mySegmentsLength.Add(l);
-					_myTotalLength += l;
-				}
+				var l = BezierLength(points[i], points[i + 1], points[i + 2], points[i + 3]);
+				segmentsLengths.Add(l);
+				totalLength += l;
 			}
 		}
 
-		public override Vector3 Interpolate(float value, int currentControlPoint)
+		protected override Vector3 Interpolate(float value, int currentControlPoint)
 		{
-			if (currentControlPoint + 3 >= _myPoints.Count)
+			if (currentControlPoint + 3 >= points.Count)
 			{
-				return _myPoints[currentControlPoint];
+				return points[currentControlPoint];
 			}
-			return CCVector3.BezierPoint(_myPoints[currentControlPoint], _myPoints[currentControlPoint + 1], _myPoints[currentControlPoint + 2], _myPoints[currentControlPoint + 3], value);
-		}
-
-		public override IList<Vector3> Points()
-		{
-			return _myPoints;
+			return CCVector3.BezierPoint(points[currentControlPoint], points[currentControlPoint + 1], points[currentControlPoint + 2], points[currentControlPoint + 3], value);
 		}
 
         // evaluate a point on a bezier-curve. t goes from 0 to 1.0
-        private void Bezier( Vector3 a, Vector3 b, Vector3 c, Vector3 d, float t, out Vector3 inControlPoint, out Vector3 anchorPoint, out Vector3 outControlPoint)
+        private static void Bezier( Vector3 a, Vector3 b, Vector3 c, Vector3 d, float t, out Vector3 inControlPoint, out Vector3 anchorPoint, out Vector3 outControlPoint)
         {
-            Vector3 ab = Vector3.Lerp(a, b, t);           // point between a and b (green)
-            Vector3 bc = Vector3.Lerp(b, c, t);           // point between b and c (green)
-            Vector3 cd = Vector3.Lerp(c, d, t);           // point between c and d (green)
+            var ab = Vector3.Lerp(a, b, t);           // point between a and b (green)
+            var bc = Vector3.Lerp(b, c, t);           // point between b and c (green)
+            var cd = Vector3.Lerp(c, d, t);           // point between c and d (green)
 
             inControlPoint = Vector3.Lerp(ab, bc, t);       // point between ab and bc (blue)
             outControlPoint = Vector3.Lerp(bc, cd, t);       // point between bc and cd (blue)
@@ -240,134 +225,138 @@ namespace cc.creativecomputing.math.spline
 
         /// <summary>
         /// Interpolate a position on the spline </summary>
-        /// <param name="theBlend"> a value from 0 to 1 that represent the position between the first control point and the last one </param>
-        /// <returns> the position </returns>
+        /// <param name="theBlend"> </param>
+        /// <param name="theBlendA"> a value from 0 to 1 that represent the position between the first control point and the last one</param>
+        /// <param name="theBlendB"></param>
+        /// <returns> The Subspline from blend a to blend n</returns>
         public virtual CCBezierSpline SubSpline(float theBlendA, float theBlendB)
         {
 
-            if (_myPoints.Count == 0)
+            if (points.Count == 0)
             {
                 return null;
             }
-            if (_mySegmentsLength == null || _mySegmentsLength.Count == 0)
+            if (segmentsLengths == null || segmentsLengths.Count == 0)
             {
                 return null;
             }
 
 
-            float myLocalBlendA;
-            int indexA = InterpolationValues(theBlendA, out myLocalBlendA) * _myInterpolationIncrease;
-            float myLocalBlendB;
-            int indexB = InterpolationValues(theBlendB, out myLocalBlendB) * _myInterpolationIncrease;
+            int indexA = InterpolationValues(theBlendA, out var myLocalBlendA) * interpolationIncrease;
+            int indexB = InterpolationValues(theBlendB, out var myLocalBlendB) * interpolationIncrease;
 
-            Vector3 inControlA;
-            Vector3 anchorA;
-            Vector3 outControlA;
-            Bezier(_myPoints[indexA], _myPoints[indexA + 1], _myPoints[indexA + 2], _myPoints[indexA + 3], myLocalBlendA, out inControlA, out anchorA, out outControlA);
+            Bezier(points[indexA], points[indexA + 1], points[indexA + 2], points[indexA + 3], myLocalBlendA, out _, out var anchorA, out var outControlA);
 
-            CCBezierSpline myResult = new CCBezierSpline();
+            var myResult = new CCBezierSpline();
             myResult.BeginEditSpline();
-            myResult._myPoints.Add(anchorA);
+            myResult.points.Add(anchorA);
 
-            if (indexA == indexB)
-            {
-                myResult._myPoints.Add(Vector3.Lerp(anchorA, outControlA, myLocalBlendB));
-            }
-            else
-            {
-                myResult._myPoints.Add(outControlA);
-            }
+            myResult.points.Add(indexA == indexB ? Vector3.Lerp(anchorA, outControlA, myLocalBlendB) : outControlA);
 
             if (indexB > indexA + 3)
             { 
-                Vector3 inControlA0 = _myPoints[indexA + 3 - 1];
-                Vector3 anchorA0 = _myPoints[indexA + 3];
-                Vector3 outControlA0 = _myPoints[indexA + 3 + 1];
+                var inControlA0 = points[indexA + 3 - 1];
+                var anchorA0 = points[indexA + 3];
+                var outControlA0 = points[indexA + 3 + 1];
 
-                myResult._myPoints.Add(Vector3.Lerp(inControlA0, anchorA0, myLocalBlendA));
-                myResult._myPoints.Add(anchorA0);
-                myResult._myPoints.Add(outControlA0);
+                myResult.points.Add(Vector3.Lerp(inControlA0, anchorA0, myLocalBlendA));
+                myResult.points.Add(anchorA0);
+                myResult.points.Add(outControlA0);
             
            
-                for (int i = indexA + 6; i < indexB; i += 3)
+                for (var i = indexA + 6; i < indexB; i += 3)
                 {
-                    Vector3 inControl = _myPoints[i - 1];
-                    Vector3 anchor = _myPoints[i];
-                    Vector3 outControl = _myPoints[i + 1];
+	                var inControl = points[i - 1];
+	                var anchor = points[i];
+	                var outControl = points[i + 1];
 
-                    myResult._myPoints.Add(inControl);
-                    myResult._myPoints.Add(anchor);
-                    myResult._myPoints.Add(outControl);
+                    myResult.points.Add(inControl);
+                    myResult.points.Add(anchor);
+                    myResult.points.Add(outControl);
                 }
 
-                Vector3 inControlB0 = _myPoints[indexB - 1];
-                Vector3 anchorB0 = _myPoints[indexB];
-                Vector3 outControlB0 = _myPoints[indexB + 1];
+                var inControlB0 = points[indexB - 1];
+                var anchorB0 = points[indexB];
+                var outControlB0 = points[indexB + 1];
 
-                myResult._myPoints.Add(inControlB0);
-                myResult._myPoints.Add(anchorB0);
-                myResult._myPoints.Add(Vector3.Lerp(anchorB0, outControlB0, myLocalBlendB));
+                myResult.points.Add(inControlB0);
+                myResult.points.Add(anchorB0);
+                myResult.points.Add(Vector3.Lerp(anchorB0, outControlB0, myLocalBlendB));
             }else if (indexB == indexA + 3)
             {
-                Vector3 inControlA0 = _myPoints[indexA + 3 - 1];
-                Vector3 anchorA0 = _myPoints[indexA + 3];
-                Vector3 outControlA0 = _myPoints[indexA + 3 + 1];
+	            var inControlA0 = points[indexA + 3 - 1];
+	            var anchorA0 = points[indexA + 3];
+	            var outControlA0 = points[indexA + 3 + 1];
 
-                myResult._myPoints.Add(Vector3.Lerp(inControlA0, anchorA0, myLocalBlendA));
-                myResult._myPoints.Add(anchorA0);
-                myResult._myPoints.Add(Vector3.Lerp(anchorA0, outControlA0, myLocalBlendB));
+                myResult.points.Add(Vector3.Lerp(inControlA0, anchorA0, myLocalBlendA));
+                myResult.points.Add(anchorA0);
+                myResult.points.Add(Vector3.Lerp(anchorA0, outControlA0, myLocalBlendB));
             }
 
-            Vector3 inControlB;
-            Vector3 anchorB;
-            Vector3 outControlB;
-            Bezier(_myPoints[indexB], _myPoints[indexB + 1], _myPoints[indexB + 2], _myPoints[indexB + 3], myLocalBlendB, out inControlB, out anchorB, out outControlB);
+            Bezier(points[indexB], points[indexB + 1], points[indexB + 2], points[indexB + 3], myLocalBlendB, out var inControlB, out var anchorB, out _);
 
-            if (indexA == indexB)
-            {
-                myResult._myPoints.Add(Vector3.Lerp(inControlB, anchorB, myLocalBlendA));
-            }
-            else
-            {
-                myResult._myPoints.Add(inControlB);
-            }
-            myResult._myPoints.Add(anchorB);
+            myResult.points.Add(indexA == indexB ? Vector3.Lerp(inControlB, anchorB, myLocalBlendA) : inControlB);
+            myResult.points.Add(anchorB);
 
             myResult.EndEditSpline();
             return myResult;
         }
+        
+        public int CurveCount {
+	        get
+	        {
+		        if (Count < 4) return 0;
+		        return (Count - 1) / 3;
+	        }
+        }
+        
+        private static Vector3 GetFirstDerivative (Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t) {
+	        t = Mathf.Clamp01(t);
+	        var oneMinusT = 1f - t;
+	        return
+		        3f * oneMinusT * oneMinusT * (p1 - p0) +
+		        6f * oneMinusT * t * (p2 - p1) +
+		        3f * t * t * (p3 - p2);
+        }
+        
+        public Vector3 Velocity (float theBlend) {
+	        int i;
+	        if (theBlend >= 1f) {
+		        theBlend = 1f;
+		        i = Count - 4;
+	        }
+	        else {
+		        theBlend = CCMath.Saturate(theBlend) * CurveCount;
+		        i = (int)theBlend;
+		        theBlend -= i;
+		        i *= 3;
+	        }
+	        return transform.TransformPoint(GetFirstDerivative(
+				this[i], 
+				this[i + 1], 
+				this[i + 2], 
+				this[i + 3], theBlend)
+	               ) - transform.position;
+        }
 
-        public void Draw(Color theColor, float theWidth, bool drawHandles = false)
+        public override void Draw()
         {
-            if (_myPoints.Count < 4) return;
+            if (Count < 4) return;
 
-            for (int i = 0; i < _myPoints.Count - 3;i+=3) {
-                Vector3 startAncor = _myPoints[i];
-                Vector3 startControl = _myPoints[i + 1];
-                Vector3 endControl = _myPoints[i + 2];
-                Vector3 endAnchor = _myPoints[i + 3];
-                //Handles.DrawBezier(startAncor, endAnchor, startControl, endControl, theColor, null, theWidth);
-
-                if (!drawHandles) continue;
-                /*
-                Handles.color = theColor;
-                Handles.DrawSolidDisc(startAncor, new Vector3(0,0,1), 0.05f);
-                Handles.DrawSolidDisc(endAnchor, new Vector3(0, 0, 1), 0.05f);
-                Handles.DrawSolidDisc(startControl, new Vector3(0, 0, 1), 0.05f);
-                Handles.DrawSolidDisc(endControl, new Vector3(0, 0, 1), 0.05f);
-
-                Handles.DrawLine(startAncor, startControl);
-                Handles.DrawLine(endAnchor, endControl);
-                */
+            for (var i = 0; i < points.Count - 3;i+=3) {
+                var startAnchor = transform.TransformPoint(this[i]);
+                var startControl = transform.TransformPoint(this[i + 1]);
+                var endControl = transform.TransformPoint(this[i + 2]);
+                var endAnchor = transform.TransformPoint(this[i + 3]);
+                Handles.DrawBezier(startAnchor, endAnchor, startControl, endControl, Color.white, null, 2);
             }
-
         }
 
         public CCBezierSpline Clone()
         {
             CCBezierSpline myResult = new CCBezierSpline();
             myResult.BeginEditSpline();
-            _myPoints.ForEach(p => myResult._myPoints.Add(p));
+            points.ForEach(p => myResult.points.Add(p));
             myResult.EndEditSpline();
             return myResult;
         }

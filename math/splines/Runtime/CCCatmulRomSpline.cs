@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using cc.creativecomputing.math.util;
 
@@ -44,52 +45,52 @@ namespace cc.creativecomputing.math.spline
 
 		public override void BeginEditSpline()
 		{
-			if (_myIsModified)
+			if (isModified)
 			{
 				return;
 			}
 
-			_myIsModified = true;
+			isModified = true;
 
-			if (_myPoints.Count < 2)
+			if (points.Count < 2)
 			{
 				return;
 			}
 
-			_myPoints.RemoveAt(0);
-			_myPoints.RemoveAt(_myPoints.Count - 1);
+			points.RemoveAt(0);
+			points.RemoveAt(points.Count - 1);
 
-			if (_myIsClosed)
+			if (isClosed)
 			{
-				_myPoints.RemoveAt(_myPoints.Count - 1);
+				points.RemoveAt(points.Count - 1);
 			}
 		}
 
 		public override void EndEditSpline()
 		{
-			if (!_myIsModified)
+			if (!isModified)
 			{
 				return;
 			}
 
-			_myIsModified = false;
+			isModified = false;
 
-			if (_myPoints.Count < 2)
+			if (points.Count < 2)
 			{
 				return;
 			}
-			if (_myIsClosed)
+			if (isClosed)
 			{
-				_myPoints.Insert(0,_myPoints[_myPoints.Count - 1]);
-				_myPoints.Add(_myPoints[1]);
-				_myPoints.Add(_myPoints[2]);
+				points.Insert(0,points[points.Count - 1]);
+				points.Add(points[1]);
+				points.Add(points[2]);
 			}
 			else
 			{
-				_myPoints.Insert(0,_myPoints[0]);
-				_myPoints.Add(_myPoints[_myPoints.Count - 1]);
+				points.Insert(0,points[0]);
+				points.Add(points[points.Count - 1]);
 			}
-			ComputeTotalLentgh();
+			ComputeTotalLength();
 		}
 
 		/// <summary>
@@ -105,23 +106,23 @@ namespace cc.creativecomputing.math.spline
 		private float CatmullRomLength(Vector3 theP0, Vector3 theP1, Vector3 theP2, Vector3 theP3, float theStartRange, float theEndRange, float theCurveTension)
 		{
 
-			float epsilon = 0.001f;
-			float middleValue = (theStartRange + theEndRange) * 0.5f;
-			Vector3 start = theP1;
-			if (theStartRange != 0)
+			const float epsilon = 0.001f;
+			var middleValue = (theStartRange + theEndRange) * 0.5f;
+			var start = theP1;
+			if (Math.Abs(theStartRange) > epsilon)
 			{
 				start = CCVector3.CatmulRomPoint(theP0, theP1, theP2, theP3, theStartRange, theCurveTension);
 			}
-			Vector3 end = theP2;
-			if (theEndRange != 1)
+			var end = theP2;
+			if (Math.Abs(theEndRange - 1) > epsilon)
 			{
 				end = CCVector3.CatmulRomPoint(theP0, theP1, theP2, theP3, theEndRange, theCurveTension);
 			}
-			Vector3 middle = CCVector3.CatmulRomPoint(theP0, theP1, theP2, theP3, middleValue, theCurveTension);
-			float l = Vector3.Distance(end,start);
-			float l1 = Vector3.Distance(middle,start);
-			float l2 = Vector3.Distance(end, middle);
-			float len = l1 + l2;
+			var middle = CCVector3.CatmulRomPoint(theP0, theP1, theP2, theP3, middleValue, theCurveTension);
+			var l = Vector3.Distance(end,start);
+			var l1 = Vector3.Distance(middle,start);
+			var l2 = Vector3.Distance(end, middle);
+			var len = l1 + l2;
 			if (l + epsilon < len)
 			{
 				l1 = CatmullRomLength(theP0, theP1, theP2, theP3, theStartRange, middleValue, theCurveTension);
@@ -143,33 +144,26 @@ namespace cc.creativecomputing.math.spline
 		{
 			return CatmullRomLength(theP0, theP1, theP3, theP4, 0, 1, theCurveTension);
 		}
-
-		public override void ComputeTotalLengthImpl()
+		
 		/// <summary>
 		/// This method computes the Catmull Rom curve length.
 		/// </summary>
+		protected override void ComputeTotalLengthImpl()
+
 		{
-			if (_myPoints.Count > 3)
+			if (points.Count <= 3) return;
+			for (var i = 0; i < points.Count - 3; i++)
 			{
-				for (int i = 0; i < _myPoints.Count - 3; i++)
-				{
-					float l = CatmullRomLength(_myPoints[i], _myPoints[i + 1], _myPoints[i + 2], _myPoints[i + 3], _myCurveTension);
-					_mySegmentsLength.Add(l);
-					_myTotalLength += l;
-				}
+				var l = CatmullRomLength(points[i], points[i + 1], points[i + 2], points[i + 3], _myCurveTension);
+				segmentsLengths.Add(l);
+				totalLength += l;
 			}
 		}
 
-		public override Vector3 Interpolate(float value, int currentControlPoint)
+		protected override Vector3 Interpolate(float value, int currentControlPoint)
 		{
 			EndEditSpline();
-			if (currentControlPoint + 3 >= _myPoints.Count)
-			{
-				return _myPoints[currentControlPoint];
-			}
-			return CCVector3.CatmulRomPoint(_myPoints[currentControlPoint], _myPoints[currentControlPoint + 1], _myPoints[currentControlPoint + 2], _myPoints[currentControlPoint + 3], value, _myCurveTension);
-
-
+			return currentControlPoint + 3 >= points.Count ? points[currentControlPoint] : CCVector3.CatmulRomPoint(points[currentControlPoint], points[currentControlPoint + 1], points[currentControlPoint + 2], points[currentControlPoint + 3], value, _myCurveTension);
 		}
 	//	@Override
 	//	public Vector3 interpolate(float value, int currentControlPoint) {
@@ -194,9 +188,9 @@ namespace cc.creativecomputing.math.spline
 	//        	);
 	//     }
 
-		public virtual Vector3 ClosestPoint(Vector3 theClosestPoint, int theStart, int theEnd)
+	protected virtual Vector3 ClosestPoint(Vector3 theClosestPoint, int theStart, int theEnd)
 		{
-			if (_myPoints.Count < 4)
+			if (points.Count < 4)
 			{
 				return new Vector3();
 			}
@@ -231,7 +225,7 @@ namespace cc.creativecomputing.math.spline
 
 		public override Vector3 ClosestPoint(Vector3 theClosestPoint)
 		{
-			return ClosestPoint(theClosestPoint, 0, _myPoints.Count - 3);
+			return ClosestPoint(theClosestPoint, 0, points.Count - 3);
 		}
 
 		/// <summary>
@@ -239,32 +233,17 @@ namespace cc.creativecomputing.math.spline
 		/// 
 		/// @return
 		/// </summary>
-		public virtual float curveTension()
+		public virtual float CurveTension
 		{
-			return _myCurveTension;
-		}
-
-		/// <summary>
-		/// sets the curve tension
-		/// </summary>
-		/// <param name="_myCurveTension">
-		///            the tension </param>
-		public virtual void curveTension(float theCurveTension)
-		{
-			_myCurveTension = theCurveTension;
-			ComputeTotalLentgh();
-		}
-
-
-
-		public override IList<Vector3> Points()
-		{
-			if (_myPoints.Count < 2)
+			get => _myCurveTension;
+			set
 			{
-				return _myPoints;
+				_myCurveTension = value;
+				ComputeTotalLength();
 			}
-			return _myPoints.GetRange(1, _myPoints.Count - 1);
 		}
+		
+		public override IList<Vector3> Points => points.Count < 2 ? points : points.GetRange(1, points.Count - 1);
 
 		/// <summary>
 		/// For the catmulrom spline two extra vertices are inserted at the end 
@@ -272,9 +251,12 @@ namespace cc.creativecomputing.math.spline
 		/// used for drawing and interpolating the curve call this method instead of
 		/// <seealso cref="#points()"/> </summary>
 		/// <returns> all vertices used to draw the curve </returns>
-		public virtual IList<Vector3> curvePoints()
+		public virtual IList<Vector3> CurvePoints()
 		{
-			return _myPoints;
+			return points;
+		}
+		public override void Draw()
+		{
 		}
     }
 
