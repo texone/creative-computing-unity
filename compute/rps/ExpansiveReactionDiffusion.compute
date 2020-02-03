@@ -1,0 +1,127 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel BufferA
+#pragma kernel BufferB
+#pragma kernel BufferC
+#pragma kernel Reset
+#pragma kernel Render
+#pragma kernel Normals
+
+Texture2D<float> bufferARead;
+Texture2D<float> bufferBRead;
+Texture2D<float> bufferCRead;
+
+SamplerState sampler_bufferARead;
+SamplerState sampler_bufferBRead;
+SamplerState sampler_bufferCRead;
+
+RWTexture2D<float> bufferAWrite;
+RWTexture2D<float> bufferBWrite;
+RWTexture2D<float> bufferCWrite;
+RWTexture2D<float> renderWrite;
+RWTexture2D<float4> normalWrite;
+
+float2 iResolution;
+float iTime;
+
+float2 hash22(float2 p)
+{
+    float3 p3 = frac(float3(p.xyx) * float3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yzx+19.19);
+    return frac((p3.xx+p3.yz)*p3.zy);
+
+}
+
+[numthreads(1,1,1)]
+void Reset (uint3 id : SV_DispatchThreadID)
+{
+    bufferAWrite[id.xy] = hash22(id.xy + frac(float2(42,56)*iTime)).x;
+}
+
+[numthreads(1,1,1)]
+void BufferA (uint3 id : SV_DispatchThreadID)
+{
+    float2 uv = (id.xy + 0.5) / iResolution.xy;
+    float2 pixelSize = 1. / iResolution.xy;
+    float2 noise = hash22(id.xy+ frac(float2(42,56)*iTime))-0.5;
+
+    // get the gradients from the blurred image
+	float2 d = pixelSize*4.;
+	float4 dx = (bufferCRead.SampleLevel(sampler_bufferCRead, uv + float2(1,0) * d,0) - bufferCRead.SampleLevel(sampler_bufferCRead, uv - float2(1,0) * d,0)) * 0.5;
+	float4 dy = (bufferCRead.SampleLevel(sampler_bufferCRead, uv + float2(0,1) * d,0) - bufferCRead.SampleLevel(sampler_bufferCRead, uv - float2(0,1) * d,0)) * 0.5;
+    
+    // add some diffusive expansion
+    float2 uv_red = uv + float2(dx.x, dy.x)*pixelSize*8.; 
+    
+    // stochastic decay
+    float new_red = bufferARead.SampleLevel(sampler_bufferARead, frac(uv_red),0).x + (noise.x) * 0.0025 - 0.002; 
+    
+    // reaction-diffusion
+	new_red -= (bufferCRead.SampleLevel(sampler_bufferCRead, uv_red + (noise.xy) * pixelSize,0).x -
+				bufferARead.SampleLevel(sampler_bufferARead, uv_red + (noise.xy) * pixelSize,0)).x * 0.047; 
+        
+    bufferAWrite[id.xy] = clamp(new_red,0,1);
+}
+
+[numthreads(1,1,1)]
+void BufferB (uint3 id : SV_DispatchThreadID)
+{
+    float2 uv = (id.xy + 0.5) / iResolution.xy;
+    float2 pixelSize = 1. / iResolution.xy;
+    
+    float h = pixelSize.x;
+	float sum = 0.0;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x - 4.0 * h, uv.y), 0) * 0.05;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x - 3.0 * h, uv.y), 0) * 0.09;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x - 2.0 * h, uv.y), 0) * 0.12;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x - 1.0 * h, uv.y), 0) * 0.15;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x + 0.0 * h, uv.y), 0) * 0.16;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x + 1.0 * h, uv.y), 0) * 0.15;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x + 2.0 * h, uv.y), 0) * 0.12;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x + 3.0 * h, uv.y), 0) * 0.09;
+	sum += bufferARead.SampleLevel(sampler_bufferARead, float2(uv.x + 4.0 * h, uv.y), 0) * 0.05;
+    
+    bufferBWrite[id.xy] = sum/0.98; // normalize
+}
+
+[numthreads(1,1,1)]
+void BufferC (uint3 id : SV_DispatchThreadID)
+{
+    float2 uv = (id.xy + 0.5) / iResolution.xy;
+    float2 pixelSize = 1. / iResolution.xy;
+
+    float v = pixelSize.y;
+	float sum = 0.0;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y - 4.0 * v), 0) * 0.05;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y - 3.0 * v), 0) * 0.09;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y - 2.0 * v), 0) * 0.12;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y - 1.0 * v), 0) * 0.15;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y + 0.0 * v), 0) * 0.16;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y + 1.0 * v), 0) * 0.15;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y + 2.0 * v), 0) * 0.12;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y + 3.0 * v), 0) * 0.09;
+	sum += bufferBRead.SampleLevel(sampler_bufferBRead, float2(uv.x, uv.y + 4.0 * v), 0) * 0.05;
+    
+    bufferCWrite[id.xy] = sum/0.98; // normalize
+}
+
+[numthreads(1,1,1)]
+void Render (uint3 id : SV_DispatchThreadID)
+{
+    renderWrite[id.xy] = (bufferCRead[id.xy] - 0.5) * 2;//float(bufferCRead[id.xy] > 0.51);//pow(bufferCRead[id.xy],2.5);//float(bufferCRead[id.xy] > 1);
+}
+
+[numthreads(1,1,1)]
+void Normals (uint3 id : SV_DispatchThreadID)
+{
+    
+    float2 uv = (id.xy + 0.5) / iResolution.xy;
+    float2 pixelSize = 1. / iResolution.xy;
+
+    // get the gradients from the blurred image
+	float2 d = pixelSize*4.;
+	float4 dx = (bufferCRead.SampleLevel(sampler_bufferCRead, uv + float2(1,0) * d,0) - bufferCRead.SampleLevel(sampler_bufferCRead, uv - float2(1,0) * d,0)) * 0.5;
+	float4 dy = (bufferCRead.SampleLevel(sampler_bufferCRead, uv + float2(0,1) * d,0) - bufferCRead.SampleLevel(sampler_bufferCRead, uv - float2(0,1) * d,0)) * 0.5;
+	float3 normal = normalize(float3(dx.x,dy.x,0.05)) * 0.5 + 0.5;
+	float dots = dot(normal,float3(0,1,0));
+    normalWrite[id.xy] = float4(dots,dots,dots,1);(bufferCRead[id.xy] - 0.5) * 2;//float(bufferCRead[id.xy] > 0.51);//pow(bufferCRead[id.xy],2.5);//float(bufferCRead[id.xy] > 1);
+}

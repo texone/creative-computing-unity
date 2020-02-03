@@ -1,0 +1,123 @@
+﻿#include "MarchingCubesTables.compute"
+#include "Noise.compute"
+
+
+
+#pragma kernel CalculateTriangle
+#pragma kernel UpdateGridVal
+
+
+struct Triangles {
+	float3 posA, posB, posC;
+	float3 normalA, normalB, normalC;
+};
+
+AppendStructuredBuffer<Triangles> Tribuffer;
+RWTexture3D<float> GridValTexture;
+int GridRes;
+float Time;
+float NoiseInterval;
+float IsoLevel;
+bool EnableSmooth;
+
+float Random(float2 st)
+{
+	return frac(sin(dot(st.xy, float2(12.9898, 78.233)))* 43758.5453123);
+}
+
+[numthreads(1, 1, 1)]
+void UpdateGridVal(uint3 id : SV_DispatchThreadID) {
+	GridValTexture[id.xyz] = snoise((float3(id.xyz) + float3(Time,0,0))* NoiseInterval);
+}
+
+float3 CalculateNormal(uint3 id, int connectIndex){
+    int3 indices1 = IndexMap[connectIndex];
+    float3 result = float3(
+	    GridValTexture[id.xyz + uint3(indices1 + NEG_X)] - GridValTexture[id.xyz + uint3(id.xyz + uint3(indices1 + POS_X))],
+		GridValTexture[id.xyz + uint3(indices1 + NEG_Y)] - GridValTexture[id.xyz + uint3(id.xyz + uint3(indices1 + POS_Y))],
+		GridValTexture[id.xyz + uint3(indices1 + NEG_Z)] - GridValTexture[id.xyz + uint3(id.xyz + uint3(indices1 + POS_Z))]
+	);
+	return normalize(result);
+}
+
+[numthreads(1, 1, 1)]
+void CalculateTriangle(uint3 id : SV_DispatchThreadID)
+{
+	float valCollection[8];
+
+	int index = 0;
+	for (int l = 0; l < 8; l++)
+	{
+	    valCollection[l] = GridValTexture[id.xyz + LookUp[l]];
+		if (valCollection[l] >= IsoLevel)
+			index |= 1 << l;
+	}
+
+	float3 centerOffset = float3(id.xyz);
+
+	for (int l = 0; l < 5; l++)
+	{
+		if (TriangleTable[index][l * 3] < 0)continue;
+		
+		Triangles tempTri;
+		for (int k = 0; k < 3; k++) {
+			int newIndex = l * 3 + k;
+			float3 dirOffset = EdgePointDir[TriangleTable[index][newIndex]];
+
+			int connectIndex1 = ConnectionMap[TriangleTable[index][newIndex]][0];
+			int connectIndex2 = ConnectionMap[TriangleTable[index][newIndex]][1];
+
+			// meshPos.Add(centerOffset + dirOffset * girdInterval * 0.5f);
+			float3 p1 = VertexPointDir[connectIndex1];
+			float3 p2 = VertexPointDir[connectIndex2];
+
+			p1 /= 2.0f;
+			p2 /= 2.0f;
+				
+			float3 finalPos = p1 + (IsoLevel - valCollection[connectIndex1]) * (p2 - p1) / (valCollection[connectIndex2] - valCollection[connectIndex1]);
+			double lerpRatio = distance(p1, finalPos) / distance(p1, p2);
+
+			finalPos += centerOffset;
+			finalPos = finalPos - float3(GridRes / 2, GridRes / 2, GridRes / 2);
+
+            switch(k){
+            case 0:
+				tempTri.posC = finalPos;
+				break;
+            case 1:
+				tempTri.posB = finalPos;
+				break;
+            case 2:
+				tempTri.posA = finalPos;
+				break;
+            }
+			
+			if (EnableSmooth) {
+                float3 normal1 = CalculateNormal(id, connectIndex1);
+                float3 normal2 = CalculateNormal(id, connectIndex2);
+				float3 finalNormal = (1-lerpRatio) * normal1 + lerpRatio * normal2;
+
+                switch(k){
+                case 0:
+					tempTri.normalC = finalNormal;
+				    break;
+                case 1:
+					tempTri.normalB = finalNormal;
+				    break;
+                case 2:
+					tempTri.normalA = finalNormal;
+				    break;
+                }
+			}
+		}
+
+		if (!EnableSmooth) {
+			float3 tempNormal = cross(tempTri.posB - tempTri.posA, tempTri.posC - tempTri.posA);
+			tempTri.normalA = tempNormal;
+			tempTri.normalB = tempNormal;
+			tempTri.normalC = tempNormal;
+		}
+
+		Tribuffer.Append(tempTri);
+	}
+}

@@ -38,7 +38,7 @@ namespace cc.creativecomputing.render
         {
         }
 
-        public override bool IsValid()
+        public bool IsValid()
         {
             return _myTextureSky != null && _mySkyMaterial != null;
         }

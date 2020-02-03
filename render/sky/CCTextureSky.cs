@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
@@ -14,7 +15,7 @@ namespace cc.creativecomputing.render
 
         public TextureParameter texture = new TextureParameter(null);
 
-        public override SkyRenderer CreateRenderer()
+        public SkyRenderer CreateRenderer()
         {
             return new CCTextureSkyRenderer(this);
         }
@@ -29,6 +30,11 @@ namespace cc.creativecomputing.render
             }
 
             return hash;
+        }
+
+        public override Type GetSkyRendererType()
+        {
+            throw new NotImplementedException();
         }
     }
 }

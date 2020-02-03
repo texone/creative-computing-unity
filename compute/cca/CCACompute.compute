@@ -1,0 +1,117 @@
+﻿#pragma kernel ResetKernel
+#pragma kernel StepKernel
+
+Texture2D<float> readTex;
+SamplerState sampler_readTex;
+
+RWTexture2D<float> writeTex;
+RWTexture2D<float4> outTex;
+Texture2D<float4> outTex2;
+
+int resolution;
+
+int range;
+int threshold;
+int nStates;
+bool moore;
+
+// via "The Art of Code" on Youtube
+float2 Random2(float2 p) {
+	float3 a = frac(p.xyx * float3(123.34, 234.34, 345.65));
+	a += dot(a, a + 34.45);
+	return frac(float2(a.x * a.y, a.y * a.z));
+}
+
+float2 Random(float2 p)
+{
+    float3 p3 = frac(float3(p.xyx) * float3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yzx+19.19);
+    return frac((p3.xx+p3.yz)*p3.zy);
+
+}
+
+[numthreads(1,1,1)]
+void ResetKernel(uint3 id : SV_DispatchThreadID){
+    writeTex[id.xy] = (int)(Random2(id.xy * 0.1).x * nStates);
+}
+
+ //  Function from Iñigo Quiles
+ //  https://www.shadertoy.com/view/MsS3Wc
+ //  via: https://thebookofshaders.com/06/
+float4 hsb2rgb(float3 c) {
+	float3 rgb = clamp(abs(((c.x * 6.0 + float3(0.0, 4.0, 2.0)) % 6.0) - 3.0) - 1.0, 0.0, 1.0);
+	rgb = rgb * rgb * (3.0 - 2.0 * rgb);
+	float3 o = c.z * lerp(float3(1.0, 1.0, 1.0), rgb, c.y);
+	return float4(o.r, o.g, o.b, 1);
+}
+
+float fade;
+float stateAmount;
+float countAmount;
+
+float hue0;
+float hue1;
+
+float sat0;
+float sat1;
+
+float bri0;
+float bri1;
+
+float offset;
+
+void Render(uint3 id, float state, float count){
+    float s = state / nStates;
+    float c = float(count >= threshold);
+    
+    float d = s * stateAmount + c * countAmount;
+    
+    float hue = lerp(hue0, hue1, d) % 1;
+    float sat = clamp(lerp(sat0, sat1, d),0,1);
+    float bri = clamp(lerp(bri0, bri1, d),0,1);
+    
+    outTex[id.xy] = lerp(hsb2rgb(float3(hue,sat,bri)) * 5, outTex[id.xy], fade);
+}
+
+float randomProb;
+
+StructuredBuffer<float2> lookups;
+
+[numthreads(1,1,1)]
+void StepKernel(uint3 id : SV_DispatchThreadID){
+    // READ state
+    uint state = readTex[id.xy];
+    uint count = 0;
+    uint next = (state + 1) == nStates ? 0 : state + 1;
+    uint numStructs;
+    uint stride;
+    
+    lookups.GetDimensions(numStructs, stride);
+    /*
+    for(int i = 0; i < numStructs;i++){
+        uint s = readTex.SampleLevel(sampler_readTex, (id.xy + lookups[i]) / (float)resolution, 0);
+        count += (uint)(s == next);
+    }*/
+    
+    for(int x = -range; x <= range; x++){
+        for(int y = -range; y <= range; y++){
+            if((x == 0 && y == 0))continue;
+            
+            if(moore || (x == 0 || y == 0)){
+                uint s = readTex.SampleLevel(sampler_readTex, (id.xy + float2(x,y)) / (float)resolution, 0);
+                count += (uint)(s == next);
+            }
+        }
+    }
+    
+    if(count >= (threshold)){
+        state = (state + 1) % nStates;
+    }
+    
+    if(Random(id.xy*0.01+float2(offset +1,offset )).x > randomProb){
+        writeTex[id.xy] = (int)(Random(id.xy * 0.01+float2(offset +3,offset )).x * nStates);
+    }else{
+        writeTex[id.xy] = state;
+    }
+    Render(id, state, count);
+}

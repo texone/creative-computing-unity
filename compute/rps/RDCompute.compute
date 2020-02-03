@@ -1,0 +1,54 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Laplacians
+#pragma kernel ReactionDiffusion
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float> A;
+RWTexture2D<float> B;
+
+
+RWTexture2D<float> dxA;
+RWTexture2D<float> dxB;
+
+
+RWTexture2D<uint> numberOfNeighbours;
+RWTexture2D<uint> neighbours;
+RWTexture2D<float> weights;
+
+[numthreads(8,8,1)]
+void Laplacians (uint3 id : SV_DispatchThreadID)
+{
+    float nA = 0, nB = 0;
+    uint neighboursCount = numberOfNeighbours[uint2(id.x,0)];
+    for (int n = 0; n < neighboursCount; n++){
+        uint2 nLookUp = uint2(id.x, n);
+        uint2 lookUp = uint2(neighbours[nLookUp],0);
+        nA += A[lookUp];
+        nB += B[lookUp] * weights[nLookUp];
+    }
+
+    nA /= neighboursCount;
+
+    dxA[id.xy] = nA - A[id.xy];
+    dxB[id.xy] = nB - B[id.xy];
+}
+
+
+RWTexture2D<float> v;
+RWTexture2D<float> f;
+RWTexture2D<float> k;
+RWTexture2D<float> dB;
+                
+//reaction diffusion
+[numthreads(8,8,1)]
+void ReactionDiffusion (uint3 id : SV_DispatchThreadID)
+{
+    float AB2 = A[id.xy] * B[id.xy] * B[id.xy];
+    A[id.xy] += 1.0 * dxA[id.xy] * v[id.xy] - AB2 + f[id.xy] * (1.0 - A[id.xy]);
+    B[id.xy] += dB[id.xy] * dxB[id.xy] * v[id.xy] + AB2 - (k[id.xy] + f[id.xy]) * B[id.xy];
+
+    A[id.xy] = (A[id.xy] < 0 ? 0 : (A[id.xy] > 1 ? 1 : A[id.xy]));
+    B[id.xy] = (B[id.xy] < 0 ? 0 : (B[id.xy] > 1 ? 1 : B[id.xy]));
+}
+               
