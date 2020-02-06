@@ -134,7 +134,7 @@ public class ExpansiveReactionDiffusion : CCTextureProvider
         outMat.SetTexture(textureProperty, _render);
     }
 
-    public override RenderTexture Texture()
+    public override Texture Texture()
     {
         return _render;
     }
