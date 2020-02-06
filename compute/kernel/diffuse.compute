@@ -1,0 +1,30 @@
+﻿//
+#pragma kernel Kernel
+
+Texture2D<float4> diffuseReadTex;
+SamplerState sampler_diffuseReadTex;
+RWTexture2D<float4> diffuseWriteTex;
+float diffuseDecayFactor;
+float diffuseSize;
+float2 texRez;
+
+[numthreads(1, 1, 1)]
+void Kernel(uint3 id : SV_DispatchThreadID)
+{
+	float4 oc = diffuseReadTex[id.xy];
+
+	float avg = 0;
+	for (int x = -1; x <= 1; x++) {
+		for (int y = -1; y <= 1; y++) {
+			float2 coord = (id.xy + float2(x, y) * diffuseSize) / texRez;
+			avg += diffuseReadTex.SampleLevel(sampler_diffuseReadTex, coord, 0).r;
+		}
+	}
+
+	avg /= 9.0;
+
+	oc = avg * diffuseDecayFactor;
+	oc = clamp(oc, 0, 1);
+
+	diffuseWriteTex[id.xy] = oc;
+}
