@@ -8,10 +8,12 @@ namespace cc.creativecomputing.render
         {
             var myResult = new RenderTexture(theSetup.width, theSetup.height, theSetup.depth, theSetup.format)
             {
-                enableRandomWrite = true,
+                name = theSetup.name,
+                enableRandomWrite = theSetup.enableRandomWrite,
                 filterMode = theSetup.filterMode,
                 wrapMode = theSetup.wrapMode,
                 useMipMap = theSetup.useMipMap,
+                autoGenerateMips = theSetup.autoGenerateMips,
                 dimension = theSetup.dimension,
                 volumeDepth =  theSetup.volumeDepth
             };
