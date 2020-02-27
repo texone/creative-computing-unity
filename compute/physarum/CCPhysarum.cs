@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using cc.creativecomputing.render;
+using cc.creativecomputing.ui;
 using UnityEngine;
-using EasyButtons;
 using UnityEngine.Rendering;
 using UnityEngine.SocialPlatforms;
 
@@ -63,7 +63,7 @@ namespace cc.creativecomputing.compute
             Reset();
         }
 
-        [Button]
+        [CCUIButton]
         public void Reset()
         {
             _agentsDebugKernel = cs.FindKernel("AgentsDebugKernel");
@@ -109,7 +109,7 @@ namespace cc.creativecomputing.compute
 
         }
 
-        [Button]
+        [CCUIButton]
         public void Step()
         {
 

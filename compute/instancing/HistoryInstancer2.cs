@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Resources;
 using cc.creativecomputing.render;
-using EasyButtons;
+using cc.creativecomputing.ui;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -83,7 +83,7 @@ public class HistoryInstancer2 : MonoBehaviour
     }
     
 
-    [Button]
+    [CCUIButton]
     private void Reset()
     {
         var texture = input.Texture();

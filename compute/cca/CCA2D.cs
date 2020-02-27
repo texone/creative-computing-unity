@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
+using cc.creativecomputing.ui;
 using UnityEngine;
-using EasyButtons;
-using UnityEditor.Rendering;
 
 public class CCA2D : MonoBehaviour
 {
@@ -130,7 +129,7 @@ public class CCA2D : MonoBehaviour
         SwapTex();
     }
 
-    [Button]
+    [CCUIButton]
     private void Reset()
     {
         _readTex = CreateTexture(RenderTextureFormat.RFloat);
@@ -147,7 +146,7 @@ public class CCA2D : MonoBehaviour
     }
 
 
-    [Button]
+    [CCUIButton]
     public void RandomizeParameters()
     {
         range = (int)Random.Range(1, MAX_RANGE);
@@ -158,14 +157,14 @@ public class CCA2D : MonoBehaviour
         SetSimulationParameters();
     }
 
-    [Button]
+    [CCUIButton]
     public void ResetAndRandomize()
     {
         RandomizeParameters();
         Reset();
     }
 
-    [Button]
+    [CCUIButton]
     private void Step()
     {
         

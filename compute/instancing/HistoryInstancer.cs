@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Resources;
 using cc.creativecomputing.render;
-using EasyButtons;
+using cc.creativecomputing.ui;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -34,7 +34,7 @@ public class HistoryInstancer : MonoBehaviour
 
     public bool append = true;
 
-    [Button]
+    [CCUIButton]
     private void Reset()
     {
         index = 0;

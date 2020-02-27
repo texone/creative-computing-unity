@@ -1,5 +1,5 @@
 ﻿using cc.creativecomputing.render;
-using EasyButtons;
+using cc.creativecomputing.ui;
 using UnityEngine;
 
 public class ExpansiveReactionDiffusion : CCTextureProvider
@@ -56,7 +56,7 @@ public class ExpansiveReactionDiffusion : CCTextureProvider
         Reset();
     }
     
-    [Button]
+    [CCUIButton]
     private void Reset()
     {
         cs.SetTexture(_myResetKernel, "bufferAWrite", _bufferA.WriteTex);
