@@ -21,21 +21,37 @@ namespace cc.creativecomputing.render.util
         public override void GetData(RenderTexture theTargetMap, List<Vector4> theDataList)
         {
             if (curves.Count <= 0) return;
-            for (int y = 0; y < theTargetMap.height; y++)
+            for (var y = 0; y < theTargetMap.height; y++)
             {
-                AnimationCurve myCurve = curves[y % curves.Count];
+                var myCurve = curves[y % curves.Count];
               
-                for (int x = 0; x < theTargetMap.width; x++)
+                for (var x = 0; x < theTargetMap.width; x++)
                 {
-                    float value = myCurve.Evaluate(CCMath.Norm(x,0, theTargetMap.width - 1));
+                    var value = myCurve.Evaluate(CCMath.Norm(x,0, theTargetMap.width - 1));
                     theDataList.Add(new Vector4(value,0,0,0));
                 }
 
             }
         }
     }
+    
+    [CreateAssetMenu(fileName = "transform position data", menuName = "gpu data/transform position to texture")]
+    public class CCTransformPositionProvider : CCDataProvider
+    {
 
-    [ExecuteAlways]
+        public List<GameObject> gameObjects = new List<GameObject>();
+
+        public override void GetData(RenderTexture theTargetMap, List<Vector4> theDataList)
+        {
+            if (gameObjects.Count <= 0) return;
+            foreach (var t in gameObjects)
+            {
+                var position = t.transform.position;
+                theDataList.Add(new Vector4(position.x,position.y,position.z,0));
+            }
+        }
+    }
+
     public class CCDataToRenderTexture : MonoBehaviour
     {
         public RenderTexture targetMap = null;
@@ -44,14 +60,13 @@ namespace cc.creativecomputing.render.util
 
         public bool update = true;
 
-        private List<Vector4> dataList = new List<Vector4>();
+        private readonly List<Vector4> dataList = new List<Vector4>();
         private ComputeBuffer dataBuffer;
         private RenderTexture tempDataMap;
 
         private static RenderTexture CreateRenderTexture(int theWidth, int theHeight, RenderTextureFormat theFormat)
         {
-            var myResult = new RenderTexture(theWidth, theHeight, 0, theFormat);
-            myResult.enableRandomWrite = true;
+            var myResult = new RenderTexture(theWidth, theHeight, 0, theFormat) {enableRandomWrite = true};
             myResult.Create();
             return myResult;
         }
@@ -73,7 +88,7 @@ namespace cc.creativecomputing.render.util
                 dataBuffer = null;
             }
 
-            if (tempDataMap != null &&
+            if (tempDataMap &&
                (tempDataMap.width != mapWidth ||
                 tempDataMap.height != mapHeight ||
                 tempDataMap.format != format))
@@ -90,7 +105,7 @@ namespace cc.creativecomputing.render.util
                 dataBuffer = new ComputeBuffer(vcount_x4, sizeof(float));
             }
 
-            if (tempDataMap == null)
+            if (!tempDataMap)
             {
                 tempDataMap = CreateRenderTexture(mapWidth, mapHeight, format);
             }
@@ -103,19 +118,14 @@ namespace cc.creativecomputing.render.util
             computeShader.SetBuffer(0, "DataBuffer", dataBuffer);
             computeShader.SetTexture(0, "DataMap", tempDataMap);
 
-            computeShader.Dispatch(0, mapWidth/8, mapHeight/8, 1);
+            computeShader.Dispatch(0, mapWidth, mapHeight, 1);
 
             Graphics.CopyTexture(tempDataMap, targetMap);
         }
-        
 
-        void CheckConsistency()
+
+        private void CheckConsistency()
         {
-
-            if (targetMap.width % 8 != 0 || targetMap.height % 8 != 0)
-            {
-                Debug.LogError("Position map dimensions should be a multiple of 8.");
-            }
 
             if (
                targetMap.format != RenderTextureFormat.RFloat &&
@@ -144,21 +154,20 @@ namespace cc.creativecomputing.render.util
         }
 
         // Start is called before the first frame update
-        void Start()
+        private void Start()
         {
             Init();
         }
 
         private void OnValidate()
         {
-            Debug.Log("YO");
         }
 
         // Update is called once per frame
-        void Update()
+        private void Update()
         {
             if (!update) return;
-            if (dataProvider == null) return;
+            if (!dataProvider) return;
 
             dataList.Clear();
 

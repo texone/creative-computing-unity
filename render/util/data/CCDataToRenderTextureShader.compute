@@ -6,7 +6,7 @@ Buffer<float> DataBuffer;
 
 RWTexture2D<float4> DataMap;
 
-[numthreads(8, 8, 1)]
+[numthreads(1, 1, 1)]
 void TransferData(uint2 id : SV_DispatchThreadID)
 {
 	uint i = id.x + id.y * VertexCount;
@@ -18,5 +18,5 @@ void TransferData(uint2 id : SV_DispatchThreadID)
 		DataBuffer[i * 4 + 3]
 	);
 
-	DataMap[id] = float4(data.xxx,1);
+	DataMap[id] = float4(data.xyz,1);
 }
