@@ -1,4 +1,5 @@
 ﻿using cc.creativecomputing.render;
+using compute.util;
 using UnityEngine;
 
 namespace cc.creativecomputing.compute.noise{

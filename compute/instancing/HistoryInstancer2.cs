@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Resources;
 using cc.creativecomputing.render;
 using cc.creativecomputing.ui;
+using compute.util;
 using UnityEngine;
 using UnityEngine.Serialization;
 

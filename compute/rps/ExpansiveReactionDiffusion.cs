@@ -1,5 +1,6 @@
 ﻿using cc.creativecomputing.render;
 using cc.creativecomputing.ui;
+using compute.util;
 using UnityEngine;
 
 public class ExpansiveReactionDiffusion : CCTextureProvider

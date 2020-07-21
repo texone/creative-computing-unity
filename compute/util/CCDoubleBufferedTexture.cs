@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace cc.creativecomputing.render
+namespace compute.util
 {
     public class CCDoubleBufferedTexture
     {
@@ -24,7 +24,7 @@ namespace cc.creativecomputing.render
         private RenderTexture _readTex;
         private RenderTexture _writeTex;
 
-        private CCTextureSetup _mySetup;
+        private readonly CCTextureSetup _mySetup;
     
         public CCDoubleBufferedTexture(CCTextureSetup theSetup)
         {
@@ -47,6 +47,19 @@ namespace cc.creativecomputing.render
             _writeTex = CreateTexture(_mySetup);
         }
 
+        public void Destroy()
+        {
+            Object.Destroy(_readTex);
+            Object.Destroy(_writeTex);
+        }
+
+        public void Clear()
+        {
+            var tmp = UnityEngine.RenderTexture.active;
+            RenderTexture.active = _readTex;
+            GL.Clear(true, true, Color.clear);
+            RenderTexture.active = tmp;
+        }
     
     }
 }

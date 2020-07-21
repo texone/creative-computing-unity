@@ -1,0 +1,161 @@
+﻿// StableFluids - A GPU implementation of Jos Stam's Stable Fluids on Unity
+// https://github.com/keijiro/StableFluids
+
+#pragma kernel Advect2D
+#pragma kernel Force
+#pragma kernel PSetup
+#pragma kernel PFinish
+#pragma kernel Jacobi1D
+#pragma kernel Jacobi2D
+#pragma kernel Add2D
+
+// Common parameter
+float Time;
+
+
+
+// U (velocity field)
+RWTexture2D<float2> U_out;
+
+// W (velocity field; working)
+Texture2D<float2> W_in;
+RWTexture2D<float2> W_out;
+
+// Div W
+RWTexture2D<float> DivW_out;
+
+// P (pressure field)
+Texture2D<float> P_in;
+RWTexture2D<float> P_out;
+
+// Color map
+Texture2D<half4> C_in;
+SamplerState samplerC_in;
+RWTexture2D<half4> C_out;
+
+
+
+
+
+// Advect step
+
+float advectDeltaTime;
+Texture2D<float2> Advect2DIn;
+SamplerState samplerAdvect2DIn;
+RWTexture2D<float2> Advect2DOut;
+
+[numthreads(8, 8, 1)]
+void Advect2D(uint2 tid : SV_DispatchThreadID)
+{
+    uint2 dim;
+    Advect2DOut.GetDimensions(dim.x, dim.y);
+
+    float2 uv = (tid + 0.5) / dim;
+    float2 duv = Advect2DIn[tid] * float2((float)dim.y / dim.x, 1) * advectDeltaTime;
+
+    Advect2DOut[tid] = Advect2DIn.SampleLevel(samplerAdvect2DIn, uv - duv, 0);
+}
+
+// External force
+float2 ForceOrigin;
+float2 ForceVector;
+float ForceExponent;
+
+Texture2D<float4> ForceIn;
+RWTexture2D<float4> ForceOut;
+
+// Add-force step
+[numthreads(8, 8, 1)]
+void Force(uint2 tid : SV_DispatchThreadID)
+{
+    uint2 dim;
+    ForceOut.GetDimensions(dim.x, dim.y);
+
+    float2 pos = (tid + 0.5 - dim * 0.5) / dim.y;
+    float amp = exp(-ForceExponent * distance(ForceOrigin, pos));
+
+    ForceOut[tid] = float4(ForceIn[tid].xy + ForceVector * amp,1 - distance(ForceOrigin, pos),1);
+}
+
+// Setup for Project step (divW calculation)
+[numthreads(8, 8, 1)]
+void PSetup(uint2 tid : SV_DispatchThreadID)
+{
+    uint2 dim;
+    W_in.GetDimensions(dim.x, dim.y);
+
+    DivW_out[tid] = (W_in[tid + int2(1, 0)].x - W_in[tid - int2(1, 0)].x +
+                     W_in[tid + int2(0, 1)].y - W_in[tid - int2(0, 1)].y) * dim.y / 2;
+
+    P_out[tid] = 0;
+}
+
+// Finishing for Project step (divergence free field calculation)
+[numthreads(8, 8, 1)]
+void PFinish(uint2 tid : SV_DispatchThreadID)
+{
+    uint2 dim;
+    W_in.GetDimensions(dim.x, dim.y);
+
+    if (any(tid == 0) || any(tid == dim - 1)) return;
+
+    float P1 = P_in[max(tid - int2(1, 0), 1)];
+    float P2 = P_in[min(tid + int2(1, 0), dim - 2)];
+    float P3 = P_in[max(tid - int2(0, 1), 1)];
+    float P4 = P_in[min(tid + int2(0, 1), dim - 2)];
+
+    float2 u = W_in[tid] - float2(P2 - P1, P4 - P3) * dim.y / 2;
+
+    U_out[tid] = u;
+
+    if (tid.x == 1) U_out[int2(0, tid.y)] = -u;
+    if (tid.y == 1) U_out[int2(tid.x, 0)] = -u;
+    if (tid.x == dim.x - 2) U_out[int2(dim.x - 1, tid.y)] = -u;
+    if (tid.y == dim.y - 2) U_out[int2(tid.x, dim.y - 1)] = -u;
+}
+
+// Add two Textures
+
+Texture2D<float2> Add2DIn0;
+Texture2D<float2> Add2DIn1;
+RWTexture2D<float2> Add2DOut;
+
+[numthreads(8, 8, 1)]
+void Add2D(uint2 tid : SV_DispatchThreadID)
+{
+    Add2DOut[tid] = Add2DIn0[tid] + Add2DIn1[tid];
+}
+
+// Jacobi method arguments
+float JacobiAlpha;
+float JacobiBeta;
+
+// Jacobi 1 channel
+
+Texture2D<float> Jacobi1DInX;
+Texture2D<float> Jacobi1DInB;
+RWTexture2D<float> Jacobi1DOut;
+
+[numthreads(8, 8, 1)]
+void Jacobi1D(uint2 tid : SV_DispatchThreadID)
+{
+    Jacobi1DOut[tid] = (
+        Jacobi1DInX[tid - int2(1, 0)] + Jacobi1DInX[tid + int2(1, 0)] +
+        Jacobi1DInX[tid - int2(0, 1)] + Jacobi1DInX[tid + int2(0, 1)] + JacobiAlpha * Jacobi1DInB[tid]
+     ) / JacobiBeta;
+}
+
+// Jacobi 2 channel
+
+Texture2D<float2> Jacobi2DInX;
+Texture2D<float2> Jacobi2DInB;
+RWTexture2D<float2> Jacobi2DOut;
+
+[numthreads(8, 8, 1)]
+void Jacobi2D(uint2 tid : SV_DispatchThreadID)
+{
+    Jacobi2DOut[tid] = (
+        Jacobi2DInX[tid - int2(1, 0)] + Jacobi2DInX[tid + int2(1, 0)] +
+        Jacobi2DInX[tid - int2(0, 1)] + Jacobi2DInX[tid + int2(0, 1)] + JacobiAlpha * Jacobi2DInB[tid]
+    ) / JacobiBeta;
+}
