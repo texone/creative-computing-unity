@@ -5,7 +5,7 @@ using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-
+using compute.util;
 using UnityEngine;
 
 namespace cc.creativecomputing.render.raymarch

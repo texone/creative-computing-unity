@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using compute.util;
+using UnityEngine;
 
 namespace cc.creativecomputing.render.marchingcube{
     public class CCMarchingCubesGPU : MonoBehaviour
