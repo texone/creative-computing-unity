@@ -201,10 +201,14 @@ namespace cc.creativecomputing.compute
             GPUAgentsDebugKernel();
 
             outMat.SetTexture("_UnlitColorMap", outTex);
+#if UNITY_EDITOR
+
             if (!Application.isPlaying)
             {
                 UnityEditor.SceneView.RepaintAll();
             }
+            
+#endif
         }
 
 

@@ -58,7 +58,9 @@ namespace StableFluids
         public RenderTexture outputColor;
         public RenderTexture outputForce;
         public RenderTexture outputInput;
-        
+
+        public int width = Screen.width;
+        public int height = Screen.height;
         private RenderTexture AllocateBuffer(int componentCount, int width = 0, int height = 0)
         {
             var format = RenderTextureFormat.ARGBHalf;
@@ -192,8 +194,8 @@ namespace StableFluids
             
             compute.SetVector("ForceOrigin", input);
             compute.SetFloat("ForceExponent", exponent);
-            compute.SetTexture(_force, "ForceIn", _externalBuffer.ReadTex);
-            compute.SetTexture(_force, "ForceOut", _externalBuffer.WriteTex);
+            compute.SetTexture(_force, "ForceIn", _velocityBuffer.ReadTex);
+            compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);
 
             if (Input.GetMouseButton(1))
                 // Random push
@@ -205,7 +207,7 @@ namespace StableFluids
                 compute.SetVector("ForceVector", Vector4.zero);
 
             compute.Dispatch(_force, ThreadCountX, ThreadCountY, 1);
-            _externalBuffer.Swap();
+            _velocityBuffer.Swap();
             
             
            
