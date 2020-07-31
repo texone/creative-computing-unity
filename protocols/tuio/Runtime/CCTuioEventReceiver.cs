@@ -2,6 +2,7 @@
 // https://github.com/keijiro/OscJack
 
 using System.Collections.Generic;
+using System.Linq;
 using OscJack;
 using UnityEngine;
 using UnityEngine.Events;
@@ -62,52 +63,76 @@ namespace protocols.tuio
 
         #region Internal members
 
-        private List<Cursor> CursorAdded = new List<Cursor>();
-        private List<Cursor> CursorUpdated = new List<Cursor>();
-        private List<Cursor> CursorRemoved = new List<Cursor>();
+        private readonly Queue<CCTuioCursor> _addQueue = new Queue<CCTuioCursor>();
+        private readonly Queue<CCTuioCursor> _removeQueue = new Queue<CCTuioCursor>();
+        private readonly Queue<CCTuioCursor> _updateQueue = new Queue<CCTuioCursor>();
         
+        private readonly List<Cursor> _cursorAdded = new List<Cursor>();
+        private readonly List<Cursor> _cursorUpdated = new List<Cursor>();
+        private readonly List<Cursor> _cursorRemoved = new List<Cursor>();
+
+        public void OnAdd(Cursor theEvent)
+        {
+            _cursorAdded.Add(theEvent);
+        }
+        
+        public void OnUpdate(Cursor theEvent)
+        {
+            _cursorUpdated.Add(theEvent);
+        }
+        
+        public void OnRemove(Cursor theEvent)
+        {
+            _cursorRemoved.Add(theEvent);
+        }
+
+        public Dictionary<int, CCTuioCursor>.ValueCollection ActiveCursors => cursors.Values;
+
         // Used to store values on initialization
-        private int _currentPort;
-        private string _currentAddress;
+        //private int _currentPort;
 
         #endregion
 
         #region MonoBehaviour implementation
 
-        private void OnEnable()
+        private void Start()
         {
             if (string.IsNullOrEmpty(oscAddress))
             {
-                _currentAddress = null;
                 return;
             }
 
             var server = OscMaster.GetSharedServer(udpPort);
             server.MessageDispatcher.AddCallback(oscAddress, OnDataReceive);
-
-            _currentPort = udpPort;
-            _currentAddress = oscAddress;
+            
+            Debug.Log(server);
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
-            if (string.IsNullOrEmpty(_currentAddress)) return;
+            if (string.IsNullOrEmpty(oscAddress)) return;
 
-            var server = OscMaster.GetSharedServer(_currentPort);
-            server.MessageDispatcher.RemoveCallback(_currentAddress, OnDataReceive);
-
-            _currentAddress = null;
+            var server = OscMaster.GetSharedServer(udpPort);
+            server.MessageDispatcher.RemoveCallback(oscAddress, OnDataReceive);
         }
 
-        private void OnValidate()
+        private static void SendCursorEvents(List<Cursor> theEvents, Queue<CCTuioCursor> theCursors)
         {
-            if (!Application.isPlaying) return;
-            OnDisable();
-            OnEnable();
+            lock (theCursors)
+            {
+                while (theCursors.Count > 0)
+                {
+                    var myCursor = theCursors.Dequeue();
+                    theEvents.ForEach(c => c.Invoke(myCursor));
+                }
+            }
         }
 
-        void Update()
+        private void Update()
         {
+            SendCursorEvents(_cursorAdded, _addQueue);
+            SendCursorEvents(_cursorRemoved, _removeQueue);
+            SendCursorEvents(_cursorUpdated, _updateQueue);
             
         }
 
@@ -117,19 +142,34 @@ namespace protocols.tuio
 
         public Dictionary<int, CCTuioCursor> cursors = new Dictionary<int, CCTuioCursor>();
 
+        private readonly List<int> _addedCursors = new List<int>();
+        private readonly List<CCTuioCursor> _updatedCursors = new List<CCTuioCursor>();
+        private readonly List<int> _removedCursors = new List<int>();
+        
         private void OnDataReceive(string address, OscDataHandle data)
         {
-            var addedCursors = new List<int>();
-            var updatedCursors = new List<CCTuioCursor>();
-            var removedCursors = new List<int>();
+            
             var command = data.GetElementAsString(0);
-       
             switch (command)
             {
+                case "alive":
+                    for (var i = 1; i < data.GetElementCount(); i++)
+                    {
+                        var aliveId = data.GetElementAsInt(i);
+                        _addedCursors.Add(aliveId);
+                    }
+
+                    
+                    foreach (var value in cursors.Where(value => !_addedCursors.Contains(value.Key)))
+                    {
+                        _removedCursors.Add(value.Key);
+                    }
+
+                    break;
                 case "set":
                     if (data.GetElementCount() < 7) return;
                     
-                    var id = data.GetElementAsInt(0);
+                    var id = data.GetElementAsInt(1);
                     
                     if (!cursors.TryGetValue(id, out var cursor)) cursor = new CCTuioCursor(id);
                     cursor.Update(
@@ -139,52 +179,36 @@ namespace protocols.tuio
                         data.GetElementAsFloat(5),
                         data.GetElementAsFloat(6)
                         );
-                    updatedCursors.Add(cursor);
-                    break;
-                case "alive":
-                    for (var i = 1; i < data.GetElementCount(); i++)
-                    {
-                        var aliveId = data.GetElementAsInt(i);
-                        addedCursors.Add(aliveId);
-                    }
-
-                    foreach (var value in cursors)
-                    {
-                        if (!addedCursors.Contains(value.Key))
-                        {
-                            removedCursors.Add(value.Key);
-                        }
-
-                        addedCursors.Remove(value.Key);
-                    }
-
+                    
+                    _updatedCursors.Add(cursor);
                     break;
                 case "fseq":
                     if (data.GetElementCount() < 2) return;
                     frameNumber = data.GetElementAsInt(1);
-                    var count = updatedCursors.Count;
-                    for (var i = 0; i < count; i++)
+                    
+                    _updatedCursors.ForEach(updatedCursor =>
                     {
-                        var updatedCursor = updatedCursors[i];
-                        if (addedCursors.Contains(updatedCursor.Id) && !cursors.ContainsKey(updatedCursor.Id))
+                        _addedCursors.ForEach(i => Debug.Log(i));
+                        if (_addedCursors.Contains(updatedCursor.Id) && !cursors.ContainsKey(updatedCursor.Id))
                         {
+                            
                             cursors.Add(updatedCursor.Id, updatedCursor);
-                            CursorAdded.ForEach(c => c.Invoke(updatedCursor));
+                            _addQueue.Enqueue(updatedCursor);
                         }
                         else
                         {
-                            CursorUpdated.ForEach(c => c.Invoke(updatedCursor));
+                            _updateQueue.Enqueue(updatedCursor);
                         }
-                    }
+                    });
 
-                    count = removedCursors.Count;
-                    for (var i = 0; i < count; i++)
+                    _removedCursors.ForEach(cursorId =>
                     {
-                        var cursorId = removedCursors[i];
-                        cursor = cursors[cursorId];
+                        _removeQueue.Enqueue(cursors[cursorId]);
                         cursors.Remove(cursorId);
-                        CursorRemoved.ForEach(c => c.Invoke(cursor));
-                    }
+                    });
+                    _addedCursors.Clear();
+                    _removedCursors.Clear();
+                    _updatedCursors.Clear();
                     break;
             }
         }

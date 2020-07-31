@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace OscJack
 {
@@ -21,7 +22,10 @@ namespace OscJack
             lock (_callbackMap)
             {
                 if (_callbackMap.ContainsKey(address))
+                {
                     _callbackMap[address] += callback;
+                }
+                    
                 else
                     _callbackMap[address] = callback;
             }
@@ -47,10 +51,8 @@ namespace OscJack
         {
             lock (_callbackMap)
             {
-                MessageCallback callback;
-
                 // Address-specified callback
-                if (_callbackMap.TryGetValue(address, out callback))
+                if (_callbackMap.TryGetValue(address, out var callback))
                     callback(address, data);
 
                 // Monitor callback
@@ -63,8 +65,7 @@ namespace OscJack
 
         #region Private fields
 
-        Dictionary<string, MessageCallback>
-            _callbackMap = new Dictionary<string, MessageCallback>();
+        private readonly Dictionary<string, MessageCallback> _callbackMap = new Dictionary<string, MessageCallback>();
 
         #endregion
     }

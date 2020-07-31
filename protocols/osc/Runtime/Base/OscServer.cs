@@ -22,19 +22,16 @@ namespace OscJack
     {
         #region Public Properties And Methods
 
-        public OscMessageDispatcher MessageDispatcher {
-            get { return _dispatcher; }
-        }
+        public OscMessageDispatcher MessageDispatcher { get; private set; }
 
         public OscServer(int listenPort)
         {
-            _dispatcher = new OscMessageDispatcher();
-            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            MessageDispatcher = new OscMessageDispatcher();
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) {ReceiveTimeout = 100};
 
             // On some platforms, it's not possible to cancel Receive() by
             // just calling Close() -- it'll block the thread forever!
             // Therefore, we heve to set timeout to break ServerLoop.
-            _socket.ReceiveTimeout = 100;
 
             _socket.Bind(new IPEndPoint(IPAddress.Any, listenPort));
 
@@ -42,7 +39,7 @@ namespace OscJack
             _thread.Start();
 
             #if OSC_SERVER_LIST
-            _servers.Add(this);
+            Servers.Add(this);
             #endif
         }
 
@@ -52,35 +49,33 @@ namespace OscJack
             GC.SuppressFinalize(this);
 
             #if OSC_SERVER_LIST
-            if (_servers != null) _servers.Remove(this);
-            #endif
+            Servers?.Remove(this);
+#endif
         }
 
         #endregion
 
         #region IDispose implementation
 
-        void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (_disposed) return;
             _disposed = true;
 
-            if (disposing)
+            if (!disposing) return;
+            if (_socket != null)
             {
-                if (_socket != null)
-                {
-                    _socket.Close();
-                    _socket = null;
-                }
-
-                if (_thread != null)
-                {
-                    _thread.Join();
-                    _thread = null;
-                }
-
-                _dispatcher = null;
+                _socket.Close();
+                _socket = null;
             }
+
+            if (_thread != null)
+            {
+                _thread.Join();
+                _thread = null;
+            }
+
+            MessageDispatcher = null;
         }
 
         ~OscServer()
@@ -94,41 +89,31 @@ namespace OscJack
 
         #if OSC_SERVER_LIST
 
-        static List<OscServer> _servers = new List<OscServer>(8);
-        static ReadOnlyCollection<OscServer> _serversReadOnly;
+        private static readonly List<OscServer> Servers = new List<OscServer>(8);
+        private static ReadOnlyCollection<OscServer> _serversReadOnly;
 
-        internal static ReadOnlyCollection<OscServer> ServerList
-        {
-            get
-            {
-                if (_serversReadOnly == null)
-                    _serversReadOnly = new ReadOnlyCollection<OscServer>(_servers);
-                return _serversReadOnly;
-            }
-        }
+        internal static IEnumerable<OscServer> ServerList => _serversReadOnly ?? (_serversReadOnly = new ReadOnlyCollection<OscServer>(Servers));
 
-        #endif
+#endif
 
         #endregion
 
         #region Private Objects And Methods
 
-        OscMessageDispatcher _dispatcher;
+        private Socket _socket;
+        private Thread _thread;
+        private bool _disposed;
 
-        Socket _socket;
-        Thread _thread;
-        bool _disposed;
-
-        void ServerLoop()
+        private void ServerLoop()
         {
-            var parser = new OscPacketParser(_dispatcher);
+            var parser = new OscPacketParser(MessageDispatcher);
             var buffer = new byte[4096];
 
             while (!_disposed)
             {
                 try
                 {
-                    int dataRead = _socket.Receive(buffer);
+                    var dataRead = _socket.Receive(buffer);
                     if (!_disposed && dataRead > 0)
                         parser.Parse(buffer, dataRead);
                 }

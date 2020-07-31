@@ -24,9 +24,15 @@ namespace OscJack
             if (index >= _typeTags.Count) return 0;
             var tag = _typeTags[index];
             var offs = _offsets[index];
-            if (tag == 'i') return OscDataTypes.ReadInt(_sharedBuffer, offs);
-            if (tag == 'f') return (int)OscDataTypes.ReadFloat(_sharedBuffer, offs);
-            return 0;
+            switch (tag)
+            {
+                case 'i':
+                    return OscDataTypes.ReadInt(_sharedBuffer, offs);
+                case 'f':
+                    return (int)OscDataTypes.ReadFloat(_sharedBuffer, offs);
+                default:
+                    return 0;
+            }
         }
 
         public float GetElementAsFloat(int index)
@@ -34,9 +40,15 @@ namespace OscJack
             if (index >= _typeTags.Count) return 0;
             var tag = _typeTags[index];
             var offs = _offsets[index];
-            if (tag == 'f') return OscDataTypes.ReadFloat(_sharedBuffer, offs);
-            if (tag == 'i') return OscDataTypes.ReadInt(_sharedBuffer, offs);
-            return 0;
+            switch (tag)
+            {
+                case 'f':
+                    return OscDataTypes.ReadFloat(_sharedBuffer, offs);
+                case 'i':
+                    return OscDataTypes.ReadInt(_sharedBuffer, offs);
+                default:
+                    return 0;
+            }
         }
 
         public string GetElementAsString(int index)
@@ -44,17 +56,24 @@ namespace OscJack
             if (index >= _typeTags.Count) return "";
             var tag = _typeTags[index];
             var offs = _offsets[index];
-            if (tag == 's') return OscDataTypes.ReadString(_sharedBuffer, offs);
-            if (tag == 'i') return OscDataTypes.ReadInt(_sharedBuffer, offs).ToString();
-            if (tag == 'f') return OscDataTypes.ReadFloat(_sharedBuffer, offs).ToString();
-            return "";
+            switch (tag)
+            {
+                case 's':
+                    return OscDataTypes.ReadString(_sharedBuffer, offs);
+                case 'i':
+                    return OscDataTypes.ReadInt(_sharedBuffer, offs).ToString();
+                case 'f':
+                    return OscDataTypes.ReadFloat(_sharedBuffer, offs).ToString();
+                default:
+                    return "";
+            }
         }
 
         #endregion
 
         #region Internal method
 
-        internal void Scan(Byte[] buffer, int offset)
+        internal void Scan(byte[] buffer, int offset)
         {
             // Reset the internal state.
             _sharedBuffer = buffer;
@@ -79,17 +98,19 @@ namespace OscJack
             {
                 _offsets.Add(offset);
 
-                if (tag == 'i' || tag == 'f')
+                switch (tag)
                 {
-                    offset += 4;
-                }
-                else if (tag == 's')
-                {
-                    offset += OscDataTypes.GetStringSize(buffer, offset);
-                }
-                else // tag == 'b'
-                {
-                    offset += 4 + OscDataTypes.ReadInt(buffer, offset);
+                    case 'i':
+                    case 'f':
+                        offset += 4;
+                        break;
+                    case 's':
+                        offset += OscDataTypes.GetStringSize(buffer, offset);
+                        break;
+                    // tag == 'b'
+                    default:
+                        offset += 4 + OscDataTypes.ReadInt(buffer, offset);
+                        break;
                 }
             }
         }
@@ -98,10 +119,10 @@ namespace OscJack
 
         #region Private members
 
-        Byte[] _sharedBuffer;
+        private byte[] _sharedBuffer;
 
-        List<char> _typeTags = new List<char>(8);
-        List<int> _offsets = new List<int>(8);
+        private readonly List<char> _typeTags = new List<char>(8);
+        private readonly List<int> _offsets = new List<int>(8);
 
         #endregion
     }

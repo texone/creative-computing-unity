@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace OscJack
 {
@@ -15,7 +16,7 @@ namespace OscJack
             _dispatcher = dispatcher;
         }
 
-        public void Parse(Byte[] buffer, int length)
+        public void Parse(byte[] buffer, int length)
         {
             ScanMessage(buffer, 0, length);
         }
@@ -24,10 +25,10 @@ namespace OscJack
 
         #region Private Methods
 
-        OscMessageDispatcher _dispatcher;
-        OscDataHandle _dataHandle = new OscDataHandle();
+        private readonly OscMessageDispatcher _dispatcher;
+        private readonly OscDataHandle _dataHandle = new OscDataHandle();
 
-        void ScanMessage(Byte[] buffer, int offset, int length)
+        private void ScanMessage(byte[] buffer, int offset, int length)
         {
             // Where the next element begins if any
             var next = offset + length;

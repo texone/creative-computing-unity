@@ -1,6 +1,7 @@
 // OSC Jack - Open Sound Control plugin for Unity
 // https://github.com/keijiro/OscJack
 
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 using System.Collections.Generic;
@@ -64,22 +65,22 @@ namespace OscJack
         Queue<float> _floatQueue;
         Queue<string> _stringQueue;
 
-        int DequeueInt()
+        private int DequeueInt()
         {
             lock (_intQueue) return _intQueue.Dequeue();
         }
 
-        float DequeueFloat()
+        private float DequeueFloat()
         {
             lock (_floatQueue) return _floatQueue.Dequeue();
         }
 
-        string DequeueString()
+        private string DequeueString()
         {
             lock (_stringQueue) return _stringQueue.Dequeue();
         }
 
-        Vector2 DequeueVector2()
+        private Vector2 DequeueVector2()
         {
             lock (_floatQueue) return new Vector2(
                 _floatQueue.Dequeue(),
@@ -87,7 +88,7 @@ namespace OscJack
             );
         }
 
-        Vector3 DequeueVector3()
+        private Vector3 DequeueVector3()
         {
             lock (_floatQueue) return new Vector3(
                 _floatQueue.Dequeue(),
@@ -96,7 +97,7 @@ namespace OscJack
             );
         }
 
-        Vector4 DequeueVector4()
+        private Vector4 DequeueVector4()
         {
             lock (_floatQueue) return new Vector4(
                 _floatQueue.Dequeue(),
@@ -106,7 +107,7 @@ namespace OscJack
             );
         }
 
-        Vector2Int DequeueVector2Int()
+        private Vector2Int DequeueVector2Int()
         {
             lock (_intQueue) return new Vector2Int(
                 _intQueue.Dequeue(),
@@ -114,7 +115,7 @@ namespace OscJack
             );
         }
 
-        Vector3Int DequeueVector3Int()
+        private Vector3Int DequeueVector3Int()
         {
             lock (_intQueue) return new Vector3Int(
                 _intQueue.Dequeue(),
@@ -127,7 +128,7 @@ namespace OscJack
 
         #region MonoBehaviour implementation
 
-        void OnEnable()
+        private void OnEnable()
         {
             if (string.IsNullOrEmpty(_oscAddress))
             {
@@ -159,10 +160,14 @@ namespace OscJack
                 case DataType.String:
                     if (_stringQueue == null) _stringQueue = new Queue<string>();
                     break;
+                case DataType.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
-        void OnDisable()
+        private void OnDisable()
         {
             if (string.IsNullOrEmpty(_currentAddress)) return;
 
@@ -172,16 +177,14 @@ namespace OscJack
             _currentAddress = null;
         }
 
-        void OnValidate()
+        private void OnValidate()
         {
-            if (Application.isPlaying)
-            {
-                OnDisable();
-                OnEnable();
-            }
+            if (!Application.isPlaying) return;
+            OnDisable();
+            OnEnable();
         }
 
-        void Update()
+        private void Update()
         {
             switch (_dataType)
             {
@@ -232,6 +235,8 @@ namespace OscJack
                     while (_intQueue.Count > 0)
                         _vector3IntEvent.Invoke(DequeueVector3Int());
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -239,7 +244,7 @@ namespace OscJack
 
         #region OSC event callback
 
-        void OnDataReceive(string address, OscDataHandle data)
+        private void OnDataReceive(string address, OscDataHandle data)
         {
             switch (_dataType)
             {
@@ -305,6 +310,8 @@ namespace OscJack
                         _intQueue.Enqueue(data.GetElementAsInt(2));
                     }
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 

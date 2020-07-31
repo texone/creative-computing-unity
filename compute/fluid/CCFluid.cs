@@ -1,12 +1,24 @@
 ﻿// StableFluids - A GPU implementation of Jos Stam's Stable Fluids on Unity
 // https://github.com/keijiro/StableFluids
 
+using System.Collections.Generic;
 using compute.util;
 using UnityEngine;
 
-namespace StableFluids
+namespace cc.creativecomputing.compute.fluid
 {
-    public class Fluid : MonoBehaviour 
+    public class CCFluidInput
+    {
+        public Vector2 position;
+        public Vector2 motion;
+
+        public CCFluidInput(Vector2 thePosition, Vector2 theMotion)
+        {
+            position = thePosition;
+            motion = theMotion;
+        }
+    }
+    public class CCFluid : MonoBehaviour 
     {
         #region Editable attributes
 
@@ -28,7 +40,6 @@ namespace StableFluids
         #region Private members
 
         private Material _shaderSheet;
-        private Vector2 _previousInput;
 
       
         private int _advect;
@@ -183,35 +194,29 @@ namespace StableFluids
             }
         }
 
+        public List<CCFluidInput> Inputs { get; set; } = new List<CCFluidInput>();
+
+        [Range(0,1)]
+        [SerializeField] public float _randomNess = 0;
+
         private void AddForce()
         {
             _externalBuffer.Clear();
-            // Input point
-            var input = new Vector2(
-                (Input.mousePosition.x - Screen.width  * 0.5f) / Screen.height,
-                (Input.mousePosition.y - Screen.height * 0.5f) / Screen.height
-            );
             
-            compute.SetVector("ForceOrigin", input);
-            compute.SetFloat("ForceExponent", exponent);
-            compute.SetTexture(_force, "ForceIn", _velocityBuffer.ReadTex);
-            compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);
+            Inputs.ForEach(input =>
+            {
+                // Input point
+            
+                compute.SetVector("ForceOrigin", input.position / Screen.height);
+                compute.SetVector("ForceVector", Vector2.Lerp(input.motion / Screen.height * force,Random.insideUnitCircle * (force * 0.25f),_randomNess));
+                compute.SetFloat("ForceExponent", exponent);
+                compute.SetTexture(_force, "ForceIn", _velocityBuffer.ReadTex);
+                compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);
 
-            if (Input.GetMouseButton(1))
-                // Random push
-                compute.SetVector("ForceVector", Random.insideUnitCircle * (force * 0.025f));
-            else if (Input.GetMouseButton(0))
-                // Mouse drag
-                compute.SetVector("ForceVector", (input - _previousInput) * force);
-            else
-                compute.SetVector("ForceVector", Vector4.zero);
-
-            compute.Dispatch(_force, ThreadCountX, ThreadCountY, 1);
+                compute.Dispatch(_force, ThreadCountX, ThreadCountY, 1);
+            });
+            
             _velocityBuffer.Swap();
-            
-            
-           
-            _previousInput = input;
         }
 
         private void Update()

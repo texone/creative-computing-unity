@@ -71,7 +71,7 @@ void Force(uint2 tid : SV_DispatchThreadID)
     uint2 dim;
     ForceOut.GetDimensions(dim.x, dim.y);
 
-    float2 pos = (tid + 0.5 - dim * 0.5) / dim.y;
+    float2 pos = (tid + 0.5 ) / dim.y;
     float amp = exp(-ForceExponent * distance(ForceOrigin, pos));
 
     ForceOut[tid] = float4(ForceIn[tid].xy + ForceVector * amp,1 - distance(ForceOrigin, pos),1);
