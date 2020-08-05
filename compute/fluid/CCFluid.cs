@@ -51,7 +51,7 @@ namespace cc.creativecomputing.compute.fluid
         private int _add2D;
 
         private int ThreadCountX => (resolution                                + 7) / 8;
-        private int ThreadCountY => (resolution * Screen.height / Screen.width + 7) / 8;
+        private int ThreadCountY => (resolution * height / width + 7) / 8;
 
         private int ResolutionX => ThreadCountX * 8;
         private int ResolutionY => ThreadCountY * 8;
@@ -70,8 +70,8 @@ namespace cc.creativecomputing.compute.fluid
         public RenderTexture outputForce;
         public RenderTexture outputInput;
 
-        public int width = Screen.width;
-        public int height = Screen.height;
+        public int width = 7560;
+        public int height = 1920;
         private RenderTexture AllocateBuffer(int componentCount, int width = 0, int height = 0)
         {
             var format = RenderTextureFormat.ARGBHalf;
@@ -134,8 +134,8 @@ namespace cc.creativecomputing.compute.fluid
             _pressureBuffer = new CCDoubleBufferedTexture(rSetup);
             _externalBuffer = new CCDoubleBufferedTexture(rgbSetup);
 
-            _colorRT1 = AllocateBuffer(4, Screen.width, Screen.height);
-            _colorRT2 = AllocateBuffer(4, Screen.width, Screen.height);
+            _colorRT1 = AllocateBuffer(4, width, height);
+            _colorRT2 = AllocateBuffer(4, width, height);
 
             Graphics.Blit(initial, _colorRT1);
             
@@ -207,8 +207,8 @@ namespace cc.creativecomputing.compute.fluid
             {
                 // Input point
             
-                compute.SetVector("ForceOrigin", input.position / Screen.height);
-                compute.SetVector("ForceVector", Vector2.Lerp(input.motion / Screen.height * force,Random.insideUnitCircle * (force * 0.25f),_randomNess));
+                compute.SetVector("ForceOrigin", input.position / height);
+                compute.SetVector("ForceVector", Vector2.Lerp(input.motion / height * force,Random.insideUnitCircle * (force * 0.25f),_randomNess));
                 compute.SetFloat("ForceExponent", exponent);
                 compute.SetTexture(_force, "ForceIn", _velocityBuffer.ReadTex);
                 compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);

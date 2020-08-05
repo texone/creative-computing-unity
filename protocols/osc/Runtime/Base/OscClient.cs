@@ -70,45 +70,20 @@ namespace OscJack
             _socket.Send(_encoder.Buffer, _encoder.Length, SocketFlags.None);
         }
 
-        public void Send(string address, float data)
+        public void Send(string address, params float[]elements)
         {
             _encoder.Clear();
             _encoder.Append(address);
-            _encoder.Append(",f");
-            _encoder.Append(data);
-            _socket.Send(_encoder.Buffer, _encoder.Length, SocketFlags.None);
-        }
-
-        public void Send(string address, float element1, float element2)
-        {
-            _encoder.Clear();
-            _encoder.Append(address);
-            _encoder.Append(",ff");
-            _encoder.Append(element1);
-            _encoder.Append(element2);
-            _socket.Send(_encoder.Buffer, _encoder.Length, SocketFlags.None);
-        }
-
-        public void Send(string address, float element1, float element2, float element3)
-        {
-            _encoder.Clear();
-            _encoder.Append(address);
-            _encoder.Append(",fff");
-            _encoder.Append(element1);
-            _encoder.Append(element2);
-            _encoder.Append(element3);
-            _socket.Send(_encoder.Buffer, _encoder.Length, SocketFlags.None);
-        }
-
-        public void Send(string address, float element1, float element2, float element3, float element4)
-        {
-            _encoder.Clear();
-            _encoder.Append(address);
-            _encoder.Append(",ffff");
-            _encoder.Append(element1);
-            _encoder.Append(element2);
-            _encoder.Append(element3);
-            _encoder.Append(element4);
+            var typeTag = ",";
+            for (int i = 0; i < elements.Length;i++)
+            {
+                typeTag += "f";
+            }
+            _encoder.Append(typeTag);
+            foreach (var element in elements)
+            {
+                _encoder.Append(element);
+            }
             _socket.Send(_encoder.Buffer, _encoder.Length, SocketFlags.None);
         }
 
