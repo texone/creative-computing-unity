@@ -214,9 +214,10 @@ namespace cc.creativecomputing.compute.fluid
                 compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);
 
                 compute.Dispatch(_force, ThreadCountX, ThreadCountY, 1);
+                
+                _velocityBuffer.Swap();
             });
             
-            _velocityBuffer.Swap();
         }
 
         private void Update()
