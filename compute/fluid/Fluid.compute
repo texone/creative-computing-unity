@@ -1,5 +1,6 @@
 ﻿// StableFluids - A GPU implementation of Jos Stam's Stable Fluids on Unity
 // https://github.com/keijiro/StableFluids
+#include "Noise.hlsl"
 
 #pragma kernel Advect2D
 #pragma kernel Force
@@ -61,6 +62,10 @@ float2 ForceOrigin;
 float2 ForceVector;
 float ForceExponent;
 
+float ForceAttractorAmount;
+float ForceMotionAmount;
+float ForceNoiseAmount;
+
 Texture2D<float4> ForceIn;
 RWTexture2D<float4> ForceOut;
 
@@ -73,8 +78,15 @@ void Force(uint2 tid : SV_DispatchThreadID)
 
     float2 pos = (tid + 0.5 ) / dim.y;
     float amp = exp(-ForceExponent * distance(ForceOrigin, pos));
-
-    ForceOut[tid] = float4(ForceIn[tid].xy + ForceVector * amp,1 - distance(ForceOrigin, pos),1);
+    float2 force = float2(0,0);
+    // attract 
+    force += (ForceOrigin - pos) * ForceAttractorAmount;
+    // noise
+    force += (snoise_grad(float3(pos * 20,0) + 1).xy) * ForceNoiseAmount;
+    // motion
+    force += ForceOrigin * ForceMotionAmount;
+    //noise += ForceVector;
+    ForceOut[tid] = float4(ForceIn[tid].xy + force * amp, 1 - distance(ForceOrigin, pos),1);
 }
 
 // Setup for Project step (divW calculation)

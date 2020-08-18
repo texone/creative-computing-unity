@@ -11,6 +11,9 @@ namespace cc.creativecomputing.compute.fluid
     {
         public Vector2 position;
         public Vector2 motion;
+        public float noiseAmount = 0;
+        public float attractorAmount = 0;
+        public float motionAmount = 1;
 
         public CCFluidInput(Vector2 thePosition, Vector2 theMotion)
         {
