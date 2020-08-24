@@ -114,7 +114,7 @@ public enum CCDrawMode : int{
 		colorMaterial.SetInt(ZWrite, 0);
 	}
 
-	public void BeginDraw()
+	public void BeginDrawScreen()
 	{
 		// Apply the line material
 		colorMaterial.SetPass(0);
@@ -123,6 +123,14 @@ public enum CCDrawMode : int{
 		GL.LoadIdentity();
 		var proj = Matrix4x4.Ortho(0, Screen.width, 0, Screen.height, -1, 100);
 		GL.LoadProjectionMatrix(proj);
+	}
+	
+	public void BeginDraw()
+	{
+		// Apply the line material
+		colorMaterial.SetPass(0);
+		
+		GL.PushMatrix();
 	}
 
 	public void EndDraw()
@@ -269,6 +277,158 @@ public enum CCDrawMode : int{
 		Vertex(v2);
 		EndShape();
 	}
+	
+	public void Quad(
+		float x1, float y1, 
+		float x2, float y2, 
+		float x3, float y3, 
+		float x4, float y4, 
+		bool  theDrawOutline = false
+	){
+		BeginShape(theDrawOutline ? CCDrawMode.LINE_STRIP : CCDrawMode.QUADS);
+		Color(_myColor);
+		Vertex(x1, y1);
+		Vertex(x2, y2);
+		Vertex(x3, y3);
+		Vertex(x4, y4);
+		if (theDrawOutline)
+		{
+			Vertex(x1, y1);
+		}
+		EndShape();
+	}
+
+	/**
+	 * A triangle is a plane created by connecting three points. 
+	 * The first two arguments specify the first point, the middle 
+	 * two arguments specify the second point, and the last two 
+	 * arguments specify the third point.
+	 * 
+	 * @param theX1 x-coordinate of the first point
+	 * @param theY1 y-coordinate of the first point
+	 * @param theZ1 y-coordinate of the first point
+	 * 
+	 * @param theX2 x-coordinate of the second point
+	 * @param theY2 y-coordinate of the second point
+	 * @param theZ2 y-coordinate of the second point
+	 * 
+	 * @param theX3 x-coordinate of the third point
+	 * @param theY3 y-coordinate of the third point
+	 * @param theZ3 y-coordinate of the third point
+	 */
+	public void Triangle(
+		float theX1, float theY1, float theZ1,
+		float theX2, float theY2, float theZ2,
+		float theX3, float theY3, float theZ3
+	){
+		BeginShape(CCDrawMode.TRIANGLES);
+		Color(_myColor);
+		Vertex(theX1, theY1, theZ1);
+		Vertex(theX2, theY2, theZ2);
+		Vertex(theX3, theY3, theZ3);
+		EndShape();
+	}
+	
+	/**
+	 * 
+	 * @param thePoint1 first point
+	 * @param thePoint2 second point
+	 * @param thePoint3 third point
+	 */
+	public void Triangle(Vector3 thePoint1, Vector3 thePoint2, Vector3 thePoint3){
+		BeginShape(CCDrawMode.TRIANGLES);
+		Color(_myColor);
+		Vertex(thePoint1);
+		Vertex(thePoint2);
+		Vertex(thePoint3);
+		EndShape();
+	}
+	
+	public void Triangle(
+		float theX1, float theY1,
+		float theX2, float theY2,
+		float theX3, float theY3
+	){
+		BeginShape(CCDrawMode.TRIANGLES);
+		Vertex(theX1, theY1);
+		Vertex(theX2, theY2);
+		Vertex(theX3, theY3);
+		EndShape();
+	}
+	
+	/**
+	 * 
+	 * @param thePoint1 first point
+	 * @param thePoint2 second point
+	 * @param thePoint3 third point
+	 */
+	public void Triangle(Vector2 thePoint1, Vector2 thePoint2, Vector2 thePoint3){
+		BeginShape(CCDrawMode.TRIANGLES);
+		Color(_myColor);
+		Vertex(thePoint1);
+		Vertex(thePoint2);
+		Vertex(thePoint3);
+		EndShape();
+	}
+	
+	public void RectMode(CCShapeMode theRectMode){
+		_myRectMode = theRectMode;
+	}
+	
+	public CCShapeMode RectMode(){
+		return _myRectMode;
+	}
+
+	public void Rect(Vector2 thePosition, Vector2 theDimension, bool  theFill = false){
+		Rect(thePosition.x, thePosition.y, theDimension.x, theDimension.y, theFill);
+	}
+
+	public void Rect(
+		float theX1, float theY1, 
+		float theX2, float theY2,
+		bool  theDrawOutline = false
+	){
+		float hradius, vradius;
+		
+		switch (_myRectMode){
+			case CCShapeMode.CORNERS:
+				break;
+			case CCShapeMode.CORNER:
+				theX2 += theX1;
+				theY2 += theY1;
+				break;
+			case CCShapeMode.RADIUS:
+				hradius = theX2;
+				vradius = theY2;
+				theX2 = theX1 + hradius;
+				theY2 = theY1 + vradius;
+				theX1 -= hradius;
+				theY1 -= vradius;
+				break;
+			case CCShapeMode.CENTER:
+				hradius = theX2 / 2.0f;
+				vradius = theY2 / 2.0f;
+				theX2 = theX1 + hradius;
+				theY2 = theY1 + vradius;
+				theX1 -= hradius;
+				theY1 -= vradius;
+				break;
+		}
+
+		if (theX1 > theX2){
+			var temp = theX1;
+			theX1 = theX2;
+			theX2 = temp;
+		}
+
+		if (theY1 > theY2){
+			float temp = theY1;
+			theY1 = theY2;
+			theY2 = temp;
+		}
+
+		Quad(theX1, theY2,theX2, theY2, theX2, theY1, theX1, theY1, theDrawOutline);
+	}
 
 	public void Ellipse(float theX, float theY, float theZ, float theWidth, float theHeight, bool theDrawOutline = false) {
 	    var myX = theX;
@@ -350,22 +510,7 @@ public enum CCDrawMode : int{
 	    }
 	    
 	}
-	
-	/**
-	 * Draws an ellipse (oval) in the display window. An ellipse with an equal
-	 * width and height is a circle. The first two parameters set the location,
-	 * the third sets the width, and the fourth sets the height. The origin may
-	 * be changed with the ellipseMode() function.
-	 * 
-	 * @param theX
-	 * @param theY
-	 * @param theWidth
-	 * @param theHeight
-	 */
-	public void Ellipse(float theX, float theY, float theZ, float theWidth, float theHeight) {
-	    Ellipse(theX, theY, theZ, theWidth, theHeight, false);
-	}
-	
+
 	public void Ellipse(float theX, float theY, float theWidth, float theHeight){
 		Ellipse(theX, theY, 0, theWidth, theHeight);
 	}
@@ -377,11 +522,7 @@ public enum CCDrawMode : int{
 	public void Ellipse(Vector2 thePosition, float theDiameter){
 		Ellipse(thePosition.x, thePosition.y, theDiameter, theDiameter);
 	}
-	
-	public void Ellipse(Vector2 thePosition, float theWidth, float theHeight){
-		Ellipse(thePosition.x, thePosition.y, theWidth, theHeight);
-	}
-	
+
 	public void Ellipse(Vector2 thePosition, float theWidth, float theHeight, bool theDrawOutline = false){
 		Ellipse(thePosition.x, thePosition.y, 0, theWidth, theHeight, theDrawOutline);
 	}
@@ -490,6 +631,8 @@ public enum CCDrawMode : int{
 		GL.End();
 	}
 	
+	
+	
 	//////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////
 	//
@@ -596,7 +739,7 @@ public enum CCDrawMode : int{
 	// 	int glID;
 	// 	int glMatrixID;
 	// 	
-	// 	CCMatrixMode(final int theGlID, final int theGlMatrixID){
+	// 	CCMatrixMode(int theGlID, int theGlMatrixID){
 	// 		glID = theGlID;
 	// 		glMatrixID = theGlMatrixID;
 	// 	}
@@ -658,7 +801,7 @@ public enum CCDrawMode : int{
 		float n20, float n21, float n22, float n23,
 		float n30, float n31, float n32, float n33
 	){
-		final DoubleBuffer myMatrixBuffer = DoubleBuffer.allocate(16);
+		DoubleBuffer myMatrixBuffer = DoubleBuffer.allocate(16);
 		
 		myMatrixBuffer.put(n00); myMatrixBuffer.put(n10); myMatrixBuffer.put(n20); myMatrixBuffer.put(n30);
 		myMatrixBuffer.put(n01); myMatrixBuffer.put(n11); myMatrixBuffer.put(n21); myMatrixBuffer.put(n31);
@@ -678,7 +821,7 @@ public enum CCDrawMode : int{
 		float n00, float n01, float n02, 
 		float n10, float n11, float n12
 	){
-		final DoubleBuffer myMatrixBuffer = DoubleBuffer.allocate(16);
+		DoubleBuffer myMatrixBuffer = DoubleBuffer.allocate(16);
 		
 		myMatrixBuffer.put(n00); myMatrixBuffer.put(n10); myMatrixBuffer.put(0); myMatrixBuffer.put(0);
 		myMatrixBuffer.put(n01); myMatrixBuffer.put(n11); myMatrixBuffer.put(0); myMatrixBuffer.put(0);
