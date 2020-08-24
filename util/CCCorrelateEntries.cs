@@ -11,6 +11,7 @@ namespace cc.creativecomputing.util
 		public int id;
 		public bool IsCorrelated = false;
 		public Vector2 Position;
+		public Vector2 PositionDelta;
 
 
 		public CCCorrelatedEntry(int theId, bool theIsCorrelated, Vector2 thePosition)
@@ -198,6 +199,7 @@ namespace cc.creativecomputing.util
 					myCorrelatedPositions[currentId] = lastId;
 					
 					myLastEntry.IsCorrelated = true;
+					myLastEntry.PositionDelta = myNewEntry.Position - myLastEntry.Position;
 					myLastEntry.Position = myNewEntry.Position;
 					// post a move event
 					
