@@ -213,6 +213,11 @@ namespace cc.creativecomputing.compute.fluid
                 compute.SetVector("ForceOrigin", input.position / height);
                 compute.SetVector("ForceVector", Vector2.Lerp(input.motion / height * force,Random.insideUnitCircle * (force * 0.25f),_randomNess));
                 compute.SetFloat("ForceExponent", exponent);
+                
+                compute.SetFloat("ForceAttractorAmount", input.attractorAmount);
+                compute.SetFloat("ForceMotionAmount", input.motionAmount);
+                compute.SetFloat("ForceNoiseAmount", input.noiseAmount);
+                
                 compute.SetTexture(_force, "ForceIn", _velocityBuffer.ReadTex);
                 compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);
 
