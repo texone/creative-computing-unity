@@ -36,6 +36,8 @@ namespace cc.creativecomputing.input
         public CCEventHandler<CCHand> OnHandMove => _myCorrelatedEntries.OnMoveEntry;
         public CCEventHandler<CCHand> OnHandUp => _myCorrelatedEntries.OnLostEntry;
 
+        private static int mouseID = 0;
+        
         public static List<Touch> Touches
         {
          get
@@ -44,7 +46,7 @@ namespace cc.creativecomputing.input
              if (!Input.GetMouseButton(0) || Input.touches.Length > 0) return result;
              var touch = new Touch
              {
-                 fingerId = 0, 
+                 fingerId = mouseID++, 
                  position = Input.mousePosition
              };
              result.Add(touch);
@@ -64,20 +66,14 @@ namespace cc.creativecomputing.input
             while(fingers.Count > 0){
                 var f1 = fingers[0];
                 fingers.RemoveAt(0);
-
                 
-
                 var hand = new CCHand();
                 hands.Add(hand);
                 hand.Fingers.Add(f1);
                 
                 foreach (var f2 in new List<Touch>(fingers))
                 {
-                    if (hand.Fingers.Any(fH =>
-                    {
-                        Debug.Log(Vector2.Distance(fH.position, f2.position));
-                        return Vector2.Distance(fH.position, f2.position) < maxHandDistance;
-                    }))
+                    if (hand.Fingers.Any(fH => Vector2.Distance(fH.position, f2.position) < maxHandDistance))
                     {
                         hand.Fingers.Add(f2);
                         fingers.Remove(f2);
@@ -128,7 +124,7 @@ namespace cc.creativecomputing.input
             if (!drawDebug) return;
             
             var g = new CCGraphics();
-            g.BeginDraw();
+            g.BeginDrawScreen();
             
             
             var fingerRadius = maxHandDistance / 2;
