@@ -84,9 +84,12 @@ void Force(uint2 tid : SV_DispatchThreadID)
     // noise
     force += (snoise_grad(float3(pos * 20,0) + 1).xy) * ForceNoiseAmount;
     // motion
-    force += ForceOrigin * ForceMotionAmount;
+    force += ForceVector * ForceMotionAmount;
     //noise += ForceVector;
     ForceOut[tid] = float4(ForceIn[tid].xy + force * amp, 1 - distance(ForceOrigin, pos),1);
+    
+
+    //ForceOut[tid] = float4(ForceIn[tid].xy + ForceVector * amp,1 - distance(ForceOrigin, pos),1);
 }
 
 // Setup for Project step (divW calculation)
