@@ -29,6 +29,8 @@ namespace cc.creativecomputing.compute.fluid
         [SerializeField] private float viscosity = 1e-6f;
         [SerializeField] private float force = 300;
         [SerializeField] private float exponent = 200;
+        [SerializeField] private float noiseScale = 20;
+        [SerializeField] private float noiseSpeed = 0;
         [SerializeField] private Texture2D initial;
 
         #endregion
@@ -75,6 +77,8 @@ namespace cc.creativecomputing.compute.fluid
 
         public int width = 7560;
         public int height = 1920;
+
+        private float noiseOffset = 0;
         private RenderTexture AllocateBuffer(int componentCount, int width = 0, int height = 0)
         {
             var format = RenderTextureFormat.ARGBHalf;
@@ -218,6 +222,10 @@ namespace cc.creativecomputing.compute.fluid
                 compute.SetFloat("ForceMotionAmount", input.motionAmount);
                 compute.SetFloat("ForceNoiseAmount", input.noiseAmount);
                 
+                
+                compute.SetFloat("noiseScale", noiseScale);
+                compute.SetFloat("noiseOffset", noiseOffset);
+                
                 compute.SetTexture(_force, "ForceIn", _velocityBuffer.ReadTex);
                 compute.SetTexture(_force, "ForceOut", _velocityBuffer.WriteTex);
 
@@ -232,6 +240,7 @@ namespace cc.creativecomputing.compute.fluid
         {
             var dt = Time.deltaTime;
             var dx = 1.0f / ResolutionY;
+            noiseOffset += Time.deltaTime * noiseSpeed;
             
             // Common variables
             compute.SetFloat("Time", Time.time);

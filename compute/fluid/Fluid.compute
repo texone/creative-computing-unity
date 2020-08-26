@@ -66,6 +66,9 @@ float ForceAttractorAmount;
 float ForceMotionAmount;
 float ForceNoiseAmount;
 
+float noiseScale;
+float noiseOffset;
+
 Texture2D<float4> ForceIn;
 RWTexture2D<float4> ForceOut;
 
@@ -82,7 +85,7 @@ void Force(uint2 tid : SV_DispatchThreadID)
     // attract 
     force += (ForceOrigin - pos) * ForceAttractorAmount;
     // noise
-    force += (snoise_grad(float3(pos * 20,0) + 1).xy) * ForceNoiseAmount;
+    force += (snoise_grad(float3(pos * noiseScale,noiseOffset) + 1).xy) * ForceNoiseAmount;
     // motion
     force += ForceVector * ForceMotionAmount;
     //noise += ForceVector;
