@@ -12,9 +12,9 @@ namespace cc.creativecomputing.util
         {
             if (!theObject) return;
 
-            for (var i = 0; i < theObject.transform.childCount;i++)
+            foreach (Transform child in theObject.transform)
             {
-                theFunction(theObject.transform.GetChild(i).gameObject);
+                theFunction(child.gameObject); 
             }
         }
 
@@ -26,11 +26,25 @@ namespace cc.creativecomputing.util
             }
         }
         
+        public static void RemoveChildrenPlayMode(GameObject theObject)
+        {
+            for (var i = theObject.transform.childCount - 1; i >= 0; i--) {
+                Object.Destroy( theObject.transform.GetChild( i ).gameObject );
+            }
+        }
+        
         public static void RemoveChildrenEditor(GameObject theObject, params string[] theNames)
         {
             foreach (var name in theNames)
             {
                 Object.DestroyImmediate(theObject.transform.Find(name).gameObject);
+            }
+        }
+        
+        public static void RemoveChildrenEditor(GameObject theObject)
+        {
+            for (var i = theObject.transform.childCount - 1; i >= 0; i--) {
+                Object.DestroyImmediate( theObject.transform.GetChild( i ).gameObject );
             }
         }
     }
