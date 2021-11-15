@@ -185,6 +185,46 @@ MonoBehaviour:
   gradientDiffusion:
     m_OverrideState: 1
     m_Value: 1
+--- !u!114 &-3269726788233289598
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b2db86121404754db890f4c8dfe81b2, type: 3}
+  m_Name: Bloom
+  m_EditorClassIdentifier: 
+  active: 1
+  threshold:
+    m_OverrideState: 1
+    m_Value: 0.83
+  intensity:
+    m_OverrideState: 1
+    m_Value: 0.3
+  scatter:
+    m_OverrideState: 0
+    m_Value: 0.7
+  clamp:
+    m_OverrideState: 0
+    m_Value: 65472
+  tint:
+    m_OverrideState: 0
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+  highQualityFiltering:
+    m_OverrideState: 0
+    m_Value: 0
+  skipIterations:
+    m_OverrideState: 0
+    m_Value: 1
+  dirtTexture:
+    m_OverrideState: 0
+    m_Value: {fileID: 0}
+  dirtIntensity:
+    m_OverrideState: 0
+    m_Value: 0
 --- !u!114 &-960836574436384946
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -250,15 +290,7 @@ MonoBehaviour:
   m_Name: scenesettings Profile
   m_EditorClassIdentifier: 
   components:
-  - {fileID: 3141171145670821954}
-  - {fileID: 2110007606258115068}
-  - {fileID: -4892438556863431297}
-  - {fileID: -8369756476852446949}
-  - {fileID: 1577417907573039105}
-  - {fileID: -960836574436384946}
-  - {fileID: 6750953545969894887}
-  - {fileID: 8498351562644781049}
-  - {fileID: 6586406296884079855}
+  - {fileID: -3269726788233289598}
 --- !u!114 &1577417907573039105
 MonoBehaviour:
   m_ObjectHideFlags: 3

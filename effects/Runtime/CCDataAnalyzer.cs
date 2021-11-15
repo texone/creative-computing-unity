@@ -14,14 +14,14 @@ namespace cc.creativecomputing.effects
 
         public int size = 100;
         
-        public CCDataHistory val = new CCDataHistory();
-        public CCDataHistory vel = new CCDataHistory();
-        public CCDataHistory acc = new CCDataHistory();
-        public CCDataHistory jer = new CCDataHistory();
+        public CCDataHistory val;
+        public CCDataHistory vel;
+        public CCDataHistory acc;
+        public CCDataHistory jer;
 
-        private List<float> lastVal = new List<float>();
-        private List<float> lastVel = new List<float>();
-        private List<float> lastAcc = new List<float>();
+        private readonly List<float> _lastVal = new List<float>();
+        private readonly List<float> _lastVel = new List<float>();
+        private readonly List<float> _lastAcc = new List<float>();
 
         private void Init()
         {
@@ -34,15 +34,15 @@ namespace cc.creativecomputing.effects
 
             effects.effectDatas.ForEach(data =>
             {
-                while (lastVal.Count <= data.id)
+                while (_lastVal.Count <= data.id)
                 {
-                    lastVal.Add(0);
-                    lastVel.Add(0);
-                    lastAcc.Add(0);
+                    _lastVal.Add(0);
+                    _lastVel.Add(0);
+                    _lastAcc.Add(0);
                 }
-                lastVal[data.id] = 0;
-                lastVel[data.id] = 0;
-                lastAcc[data.id] = 0;
+                _lastVal[data.id] = 0;
+                _lastVel[data.id] = 0;
+                _lastAcc[data.id] = 0;
             });
         }
 
@@ -57,15 +57,9 @@ namespace cc.creativecomputing.effects
         }
 
         // Use this for initialization
-        void Start()
+        private void Start()
         {
             Init();
-        }
-
-        // Update is called once per frame
-        void Update()
-        {
-
         }
 
         private void AddData(CCDataHistory theHistory, List<float> theLast,  int theStream, float theValue)
@@ -82,76 +76,79 @@ namespace cc.creativecomputing.effects
             effects.effectDatas.ForEach(data => {
 
 
-                float angle = CCMath.Degrees(data.angle);
-                float velocity = (angle - lastVal[data.id]) / Time.deltaTime;
-                float acceleration = (velocity - lastVel[data.id]) / Time.deltaTime;
-                float jerk = (acceleration - lastAcc[data.id]) / Time.deltaTime;
+                var angle = CCMath.Degrees(data.angle);
+                var velocity = (angle - _lastVal[data.id]) / Time.deltaTime;
+                var acceleration = (velocity - _lastVel[data.id]) / Time.deltaTime;
+                var jerk = (acceleration - _lastAcc[data.id]) / Time.deltaTime;
 
 
-                AddData(val, lastVal, data.id, angle);
-                AddData(vel, lastVel, data.id, velocity);
-                AddData(acc, lastAcc, data.id, acceleration);
+                AddData(val, _lastVal, data.id, angle);
+                AddData(vel, _lastVel, data.id, velocity);
+                AddData(acc, _lastAcc, data.id, acceleration);
                 AddData(jer, null,data.id, jerk);
 
-                lastVal[data.id] = angle;
-                lastVel[data.id] = velocity;
-                lastAcc[data.id] = acceleration;
+                _lastVal[data.id] = angle;
+                _lastVel[data.id] = velocity;
+                _lastAcc[data.id] = acceleration;
             });
         }
 
-        private Material mat;
+        private Material _mat;
         [Range(0,1)]
         public float backgroundAlpha = 1;
 
+        private static readonly int Cull = Shader.PropertyToID("_Cull");
+        private static readonly int ZWrite = Shader.PropertyToID("_ZWrite");
+        private static readonly int ZTest = Shader.PropertyToID("_ZTest");
 
-        void RenderGraph(List<float> theList, Color theColor, float theY0, float theY1, float theMax)
+
+        private static void RenderGraph(IReadOnlyList<float> theList, Color theColor, float theY0, float theY1, float theMax)
         {
             GL.Begin(GL.LINE_STRIP);
             GL.Color(theColor);
             for (var i = 0; i < theList.Count; i++)
             {
                 var x = (float)i / (theList.Count - 1);
-                var theta = x;
                 var y = CCMath.Blend(theY0, theY1, CCMath.Saturate(CCMath.Norm(theList[i], -theMax, theMax)));
                 GL.Vertex3(x,y,0);
             }
             GL.End();
         }
 
-        void RenderHistory(CCDataHistory theHistory, Color theColor, float theY0, float theY1)
+        private static void RenderHistory(CCDataHistory theHistory, Color theColor, float theY0, float theY1)
         {
-            for (var i = 0; i < theHistory.data.Count; i++)
+            foreach (var t in theHistory.data)
             {
-                RenderGraph(theHistory.data[i], theColor, theY0, theY1, theHistory.max);
+                RenderGraph(t, theColor, theY0, theY1, theHistory.max);
             }
         }
 
         // Will be called from camera after regular rendering is done.
-        void OnRenderObject()
+        private void OnRenderObject()
         {
             
-            if (!mat)
+            if (!_mat)
             {
                 // Unity has a built-in shader that is useful for drawing
                 // simple colored things. In this case, we just want to use
                 // a blend mode that inverts destination colors.
                 Shader shader = Shader.Find("Hidden/Internal-Colored");
-                mat = new Material(shader);
-                mat.hideFlags = HideFlags.HideAndDontSave;
+                _mat = new Material(shader);
+                _mat.hideFlags = HideFlags.HideAndDontSave;
                 // Set blend mode to invert destination colors.
                // mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusDstColor);
                // mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
                 // Turn off backface culling, depth writes, depth test.
-                mat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
-                mat.SetInt("_ZWrite", 0);
-                mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+                _mat.SetInt(Cull, (int)UnityEngine.Rendering.CullMode.Off);
+                _mat.SetInt(ZWrite, 0);
+                _mat.SetInt(ZTest, (int)UnityEngine.Rendering.CompareFunction.Always);
             }
 
             GL.PushMatrix();
             GL.LoadOrtho();
 
             // activate the first shader pass (in this case we know it is the only pass)
-            mat.SetPass(0);
+            _mat.SetPass(0);
             // draw a quad over whole screen
             GL.Begin(GL.QUADS);
             GL.Color(new Color(1.0f, 1.0f, 1.0f, backgroundAlpha));

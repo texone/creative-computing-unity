@@ -24,19 +24,19 @@ namespace cc.creativecomputing.effects
             if (useSpeed) offset += theDeltaTime * speed; 
         }
 
-        public float[] Values(CCEffectData theData)
+        private float[] Values(CCEffectData theData)
         {
             
             return signal.Values(
-                phase.X(theData) + offset.x * theData.amount + phase.Random(theData) + phase.Id(theData) + phase.IdMod(theData) + phase.Group(theData) + phase.GroupMod(theData),
+                phase.X(theData) + offset.x,
                 phase.Y(theData) + offset.y,
-                phase.Z(theData) + offset.z
+                phase.Z(theData) + offset.z + phase.ModulationWithoutPosition(theData)
             );
         }
 
         public override float Apply(CCEffectData theData)
         {
-            if (signal == null) return 0;
+            if (!signal) return 0;
             return Values(theData)[0] * amp.Modulation(theData);
 
 

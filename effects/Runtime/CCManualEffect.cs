@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace cc.creativecomputing.effects
         private void Start()
         {
             amounts.Clear();
-            for (int i = 0; i < 20;i++)
+            for (var i = 0; i <= effects.maxID;i++)
             {
                 amounts.Add(0);
             }
@@ -22,7 +23,7 @@ namespace cc.creativecomputing.effects
         public override float Apply(CCEffectData theObject)
         {
             if (theObject.id >= amounts.Count) return 0;
-            return amounts[theObject.id]; 
+            return amounts[theObject.id];
         }
 
         public override void Simulate(float theDeltaTime) { } 

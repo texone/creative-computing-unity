@@ -1,6 +1,9 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using cc.creativecomputing.render;
+using UnityEngine;
 
-namespace compute.util{
+namespace cc.creativecomputing.util{
 public class CCBaseTextureProvider : CCTextureProvider
 {
     public Texture texture;

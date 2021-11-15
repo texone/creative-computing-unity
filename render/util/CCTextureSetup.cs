@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace compute.util
+namespace cc.creativecomputing.render
 {
     public class CCTextureSetup
     {

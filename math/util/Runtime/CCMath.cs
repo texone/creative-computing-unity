@@ -403,6 +403,16 @@ namespace cc.creativecomputing.math.util
 
 			return 3 * Pow((theValue - theMin) / (theMax - theMin), 2) - 2 * Pow((theValue - theMin) / (theMax - theMin), 3);
 		}
+		
+		/// <summary>
+		/// Generates a step function by comparing x to edge.
+		/// 0.0 is returned if x &lt; edge, and 1.0 is returned otherwise.</summary>
+		/// <param name="theEdge">Specifies the location of the edge of the step function.</param>
+		/// <param name="theValue">Specify the value to be used to generate the step function.</param>
+		/// @return </param>
+		public static float Step(float theEdge, float theValue) {
+			return theValue < theEdge ? 0 : 1; 
+		}
 
 		/// <summary>
 		/// Constrains a value to not exceed a maximum and minimum value. </summary>

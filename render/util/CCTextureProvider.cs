@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace compute.util
+namespace cc.creativecomputing.render
 {
     public abstract class CCTextureProvider : MonoBehaviour
     {

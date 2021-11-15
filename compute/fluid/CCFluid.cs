@@ -2,7 +2,7 @@
 // https://github.com/keijiro/StableFluids
 
 using System.Collections.Generic;
-using compute.util;
+using cc.creativecomputing.render;
 using UnityEngine;
 
 namespace cc.creativecomputing.compute.fluid

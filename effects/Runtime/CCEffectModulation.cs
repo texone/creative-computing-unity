@@ -18,6 +18,8 @@ namespace cc.creativecomputing.effects
         public float z;
         [Range(-1, 1)]
         public float random;
+        [Range(-1, 1)]
+        public float angle;
 
         public uint randomSeed;
 
@@ -25,6 +27,14 @@ namespace cc.creativecomputing.effects
         public float id;
         [Range(-1, 1)]
         public float idMod;
+        [Range(-1, 1)]
+        public float unit;
+        [Range(-1, 1)]
+        public float unitMod;
+        [Range(-1, 1)]
+        public float unitId;
+        [Range(-1, 1)]
+        public float unitIdMod;
         [Range(-1, 1)]
         public float groupId;
         [Range(-1, 1)]
@@ -42,27 +52,55 @@ namespace cc.creativecomputing.effects
                 Z(theData) +
                 Id(theData) +
                 IdMod(theData) +
+                Unit(theData) +
+                UnitMod(theData) +
+                UnitId(theData) +
+                UnitIdMod(theData) +
                 Group(theData) +
                 GroupId(theData) +
                 GroupMod(theData) +
                 Distance(theData) +
                 Random(theData) +
-                Constant(theData);
+                Constant(theData) + 
+                Angle(theData);
+        }
+
+        public float ModulationWithoutPosition(CCEffectData theData)
+        {
+            return
+                Id(theData) +
+                IdMod(theData) +
+                Unit(theData) +
+                UnitMod(theData) +
+                UnitId(theData) +
+                UnitIdMod(theData) +
+                Group(theData) +
+                GroupId(theData) +
+                GroupMod(theData) +
+                Distance(theData) +
+                Random(theData) +
+                Constant(theData) + 
+                Angle(theData);
         }
 
         public float X(CCEffectData theData)
         {
-            return theData.xBlend * x;
+            return theData.x * x;
         }
 
         public float Y(CCEffectData theData)
         {
-            return theData.yBlend * y;
+            return theData.y * y;
         }
 
         public float Z(CCEffectData theData)
         {
-            return theData.zBlend * z;
+            return theData.z * z;
+        }
+
+        public float Angle(CCEffectData theData)
+        {
+            return theData.angle * angle;
         }
 
         public float Random(CCEffectData theData)
@@ -99,10 +137,30 @@ namespace cc.creativecomputing.effects
         {
             return ((theData.group % 2) * 2 - 1) * groupMod;
         }
+        
+        public float Unit(CCEffectData theData)
+        {
+            return theData.unitBlend * unit;
+        }
+
+        public float UnitMod(CCEffectData theData)
+        {
+            return ((theData.unit % 2) * 2 - 1) * unitMod;
+        }
+        
+        public float UnitId(CCEffectData theData)
+        {
+            return theData.unitIDBlend * unitId;
+        }
+
+        public float UnitIdMod(CCEffectData theData)
+        {
+            return ((theData.unitID % 2) * 2 - 1) * unitIdMod;
+        }
 
         public float Distance(CCEffectData theData)
         {
-            return theData.distBlend * dist;
+            return theData.dist * dist;
         }
 
         public float Constant(CCEffectData theData)
@@ -116,8 +174,11 @@ namespace cc.creativecomputing.effects
                 x +
                 y +
                 z +
+                angle +
                 id +
                 idMod +
+                unitId +
+                unitIdMod +
                 group +
                 groupMod +
                 groupId +

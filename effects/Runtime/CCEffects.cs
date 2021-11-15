@@ -2,9 +2,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-
+using System.Linq;
 using cc.creativecomputing.math.interpolate;
 using cc.creativecomputing.math.util;
+using cc.creativecomputing.ui;
 
 namespace cc.creativecomputing.effects
 {
@@ -18,57 +19,62 @@ namespace cc.creativecomputing.effects
 
         public List<GameObject> effectNodes = new List<GameObject>();
         public List<CCEffectData> effectDatas = new List<CCEffectData>();
-        List<CCEffect> effects = new List<CCEffect>();
+        public List<CCEffect> effects = new List<CCEffect>();
 
-        private CCFilter[] filters;
-
+        private CCFilter[] _filters;
+        private CCEffectApplier[] _effectAppliers;
+        public CCAbstractEffectDataRetriever effectDataRetriever;
+        
         public float amount = 35;
 
         private void InitBounds(GameObject theEffectedNode)
         {
             if (bounds.center.Equals(new Vector3()))
             {
-                bounds = new Bounds(theEffectedNode.transform.parent.localPosition, new Vector3());
+                bounds = new Bounds(theEffectedNode.transform.position, new Vector3());
             }
-            bounds.Encapsulate(theEffectedNode.transform.parent.localPosition);
+            bounds.Encapsulate(theEffectedNode.transform.position);
         }
 
         public int maxID = 0;
 
         private void InitEffectData(List<GameObject> theEffectNodes)
         {
-            int i = 0;
             theEffectNodes.ForEach(go =>
             {
-                Transform t = go.transform;
+                var t = go.transform;
 
                 var myData = t.gameObject.GetComponent<CCEffectData>();
-                myData.xBlend = (t.parent.localPosition.x - bounds.min.x) / bounds.size.x * 2 - 1;
-                myData.yBlend = (t.parent.localPosition.y - bounds.min.y) / bounds.size.y * 2 - 1;
-                myData.zBlend = (t.parent.localPosition.z - bounds.min.z) / bounds.size.z * 2 - 1;
+                var position = t.position;
+                myData.x = (position.x - bounds.min.x) / bounds.size.x * 2 - 1;
+                myData.y = (position.y - bounds.min.y) / bounds.size.y * 2 - 1;
+                myData.z = (position.z - bounds.min.z) / bounds.size.z * 2 - 1;
 
                 effectDatas.Add(myData);
-
-                var renderer = t.gameObject.GetComponent<MeshRenderer>();
-                var material = new Material(renderer.sharedMaterial);
-                material.SetFloat("_ID", (myData.id + 0.5f) / 20f);
-                renderer.sharedMaterial = material;
             });
 
             maxID = 0;
-            int maxGroup = 0;
-            Dictionary<int, int> maxGroupIDs = new Dictionary<int, int>();
+            var maxGroup = 0;
+            var maxUnit = 0;
+            var maxGroupIDs = new Dictionary<int, int>();
+            var maxUnitIDs = new Dictionary<int, int>();
 
             effectDatas.ForEach(e =>
             {
                 maxID = Math.Max(maxID, e.id);
                 maxGroup = Math.Max(maxGroup, e.group);
+                maxUnit = Math.Max(maxGroup, e.unit);
 
                 if (!maxGroupIDs.ContainsKey(e.group))
                 {
                     maxGroupIDs.Add(e.group, e.groupID);
                 }
+                if (!maxUnitIDs.ContainsKey(e.unit))
+                {
+                    maxUnitIDs.Add(e.unit, e.unitID);
+                }
                 maxGroupIDs[e.group] = Math.Max(maxGroupIDs[e.group], e.groupID);
+                maxUnitIDs[e.unit] = Math.Max(maxUnitIDs[e.unit], e.unitID);
             });
 
             effectDatas.ForEach(e =>
@@ -76,30 +82,20 @@ namespace cc.creativecomputing.effects
                 e.idBlend = e.id / (float)maxID * 2 - 1;
                 e.groupBlend = maxGroup > 0 ? e.group / (float)maxGroup * 2 - 1 : 0;
                 e.groupIDBlend = maxGroupIDs[e.group] > 0 ? e.groupID / (float)maxGroupIDs[e.group] * 2 - 1 : 0;
+                e.unitBlend = maxUnit > 0 ? e.unit / (float)maxUnit * 2 - 1 : 0;
+                e.unitIDBlend = maxUnitIDs[e.unit] > 0 ? e.unitID / (float)maxUnitIDs[e.unit] * 2 - 1 : 0;
             });
         }
-
-        private void GetEffectObjects(GameObject theParent)
-        {
-
-            var childCount = theParent.transform.childCount;
-            for (var i = 0; i < childCount; i++)
-            {
-                GameObject myChild = theParent.transform.GetChild(i).gameObject;
-                GetEffectObjects(myChild);
-                if (myChild.GetComponent<CCEffectData>() != null)
-                {
-                    effectNodes.Add(myChild);
-                }
-            }
-        }
-
+        
+        [CCUIButton]
         private void Init()
         {
-            effectNodes.Clear();
-            GetEffectObjects(effectParent);
+            Debug.Log("INIT");
+            effectDataRetriever = effectDataRetriever ? effectDataRetriever : gameObject.AddComponent<CCEffectDataRetreiver>();
+
+            effectNodes = effectDataRetriever.RetrieveDatas(effectParent);
             effectDatas.Clear();
-            effectNodes.ForEach(go => InitBounds(go));
+            effectNodes.ForEach(InitBounds);
 
             InitEffectData(effectNodes);
             effects.Clear();
@@ -108,22 +104,31 @@ namespace cc.creativecomputing.effects
             {
                 effect.effects = this;
                 effect.dataAmounts.Clear();
-                for (int i = 0; i <= maxID; i++)
+                for (var i = 0; i <= maxID; i++)
                 {
                     effect.dataAmounts.Add(1);
                 }
             });
 
-            filters = GetComponents<CCFilter>();
+            _filters = GetComponents<CCFilter>() ?? new CCFilter[0];
+            _effectAppliers = GetComponents<CCEffectApplier>() ?? new CCEffectApplier[0];
+            
+            foreach (var ccEffectApplier in _effectAppliers)
+            {
+                foreach (var ccEffectData in effectDatas)
+                {
+                    ccEffectApplier.SetupEffectData(ccEffectData);
+                }
+            }
         }
 
         private void OnValidate()
         {
-            Init();
+            //Init();
         }
 
         // Use this for initialization
-        void Start()
+        private void Start()
         {
             Init();
         }
@@ -137,25 +142,31 @@ namespace cc.creativecomputing.effects
         public CCInterpolator interpolator;
 
         public CCEffectModulation modulation;
+        private static readonly int ID = Shader.PropertyToID("_ID");
 
         public float EffectBlend(CCEffectData theData, float theBlend)
         {
-            if (theBlend == 0) return 0;
-            if (theBlend == 1) return 1;
+            switch (theBlend)
+            {
+                case 0:
+                    return 0;
+                case 1:
+                    return 1;
+            }
 
-            float myOffsetSum = modulation.OffsetSum() * blendAmp;
+            var myOffsetSum = modulation.OffsetSum() * blendAmp;
 
-            float myModulation = modulation.Modulation(theData) * blendAmp;
-            float myBlend = (myModulation - myOffsetSum) + theBlend * (1 + myOffsetSum * 2);
+            var myModulation = modulation.Modulation(theData) * blendAmp;
+            var myBlend = (myModulation - myOffsetSum) + theBlend * (1 + myOffsetSum * 2);
             myBlend = CCMath.Saturate(myBlend);
 
-            if (interpolator != null) myBlend = interpolator.Interpolate(myBlend);
+            if (interpolator) myBlend = interpolator.Interpolate(myBlend);
 
             return myBlend;
         }
 
         // Update is called once per frame
-        void Update()
+        private void Update()
         {
 
             effects.ForEach(effect => effect.Simulate(Time.deltaTime));
@@ -163,29 +174,30 @@ namespace cc.creativecomputing.effects
             effectNodes.ForEach(element =>
             {
 
-                float myAngle = 0;
-                CCEffectData myData = element.GetComponent<CCEffectData>();
+                float myEffectOutput = 0;
+                var myData = element.GetComponent<CCEffectData>();
 
                 effects.ForEach(effect =>
                 {
-                    float myEffectAngle = effect.Apply(myData) * EffectBlend(myData, effect.amount);
-                    if (float.IsNaN(myEffectAngle))
+                    var myEffectAmount = effect.Apply(myData) * EffectBlend(myData, effect.amount);
+                    //if(myData.id == 0)Debug.Log(myEffectAmount);
+                    if (float.IsNaN(myEffectAmount))
                     {
-                        myEffectAngle = 0;
+                        myEffectAmount = 0;
                     }
-                    myAngle += myEffectAngle;
+                    myEffectOutput += myEffectAmount;
                 });
 
-                foreach (CCFilter filter in filters)
+                foreach (var filter in _filters)
                 {
-                    myAngle = filter.Process(myData.id, myAngle, Time.deltaTime);
+                    myEffectOutput = filter.Process(myData.id, myEffectOutput, Time.deltaTime);
                 }
+                myEffectOutput *= amount * (useDataAmount ? myData.amount * userAmountScale : 1);
 
-                myAngle *= amount * (useDataAmount ? myData.amount * userAmountScale : 1);
-
-                var localAngles = element.transform.localEulerAngles;
-                myData.angle = myAngle * Mathf.Deg2Rad;
-                element.transform.localEulerAngles = new Vector3(localAngles.x, localAngles.y, myAngle);
+                foreach (var applier in _effectAppliers)
+                {
+                    applier.ApplyEffect(myData, myEffectOutput);
+                }
 
             });
         }

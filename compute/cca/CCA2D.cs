@@ -39,14 +39,14 @@ public class CCA2D : MonoBehaviour
     public ComputeShader cs;
 
     public Material outMat;
-    private RenderTexture _outTex;
+    public RenderTexture _outTex;
     
     
     private RenderTexture _readTex;
     private RenderTexture _writeTex;
 
     private int _stepKernel;
-    private static readonly int UnlitColorMap = Shader.PropertyToID("_UnlitColorMap");
+    private static readonly int UnlitColorMap = Shader.PropertyToID("_BaseMap");
 
     private RenderTexture CreateTexture(RenderTextureFormat theFormat)
     {
@@ -81,6 +81,7 @@ public class CCA2D : MonoBehaviour
                 myLookUps.Add(y);
             }
         }
+        
         var myLookupsBuffer = new ComputeBuffer(myLookUps.Count,sizeof(float), ComputeBufferType.Constant);
         myLookupsBuffer.SetData(myLookUps);
         Debug.Log(myLookUps.Count);
@@ -167,7 +168,7 @@ public class CCA2D : MonoBehaviour
     [CCUIButton]
     private void Step()
     {
-        
+        Debug.Log("Step");
         cs.SetTexture(_stepKernel, "readTex",_readTex);
         cs.SetTexture(_stepKernel, "writeTex",_writeTex);
         cs.SetTexture(_stepKernel, "outTex",_outTex);
@@ -188,6 +189,7 @@ public class CCA2D : MonoBehaviour
         
         for (var i = 0; i < stepsPerFrame;i++)
         {
+            Debug.Log("Update:" + Time.frameCount +" " + stepMod + " " + stepsPerFrame);
             Step();
         }
     }

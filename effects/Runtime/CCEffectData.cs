@@ -9,22 +9,26 @@ namespace cc.creativecomputing.effects
     {
         public float amount = 1;
         public int id;
-
+        public float idBlend;
+        
         public int group;
         public float groupBlend;
 
         public int groupID;
         public float groupIDBlend;
 
-        public float idBlend;
-
-        public float distBlend;
+        public int unit;
+        public float unitBlend;
+        public int unitID;
+        public float unitIDBlend;
+        
+        public float dist;
 
         public float random => Random(0);
 
-        public float xBlend;
-        public float yBlend;
-        public float zBlend;
+        public float x;
+        public float y;
+        public float z;
 
         public float angle = 0;
 
